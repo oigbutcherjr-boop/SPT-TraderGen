@@ -19,7 +19,7 @@ TraderGen has two parts:
 
 ### For Creators (Making a Trader Pack)
 
-1. Open the **TraderGen Tool** (see `Tool/` folder)
+1. Open the **TraderGen Tool** here: https://tradergen-tool.netlify.app
 2. Fill in trader details, add items, configure loyalty levels
 3. Click **Export** to download your trader pack
 4. Test by placing the exported folder in `user/mods/TraderGen/traders/`
