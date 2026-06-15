@@ -176,7 +176,7 @@ YourTraderPack.zip
         └── avatar.jpg
 ```
 
-Users extract `YourTraderName/` into `user/mods/TraderGen/traders/`.
+Users drag `YourTraderName/` into `user/mods/TraderGen/traders/`.
 
 OR
 
@@ -191,7 +191,7 @@ SPT/
                     └── assets/
                         └── avatar.jpg # Trader image
 ```
-Users extract `SPT/` into the main SPT install directory.
+Users drag `SPT/` into the main SPT install directory.
 
 ## Validation & Error Handling
 
