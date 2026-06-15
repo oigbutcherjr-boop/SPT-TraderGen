@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import {
   Store, Plus, Trash2, Download, AlertCircle, CheckCircle,
   ChevronDown, ChevronUp, Copy, RefreshCw, Eye, Package,
@@ -11,6 +11,58 @@ import {
   createDefaultTrader, createDefaultAssortItem, createDefaultBarter, generateMongoId,
 } from './types'
 import { validateTrader, buildExportJson } from './validation'
+
+// Item name lookup via db.sp-tarkov.com API (fetches all names once, then caches)
+let itemNameDb: Map<string, string> | null = null
+let itemNameDbLoading = false
+let itemNameDbListeners: Array<() => void> = []
+
+async function loadItemNameDb() {
+  if (itemNameDb || itemNameDbLoading) return
+  itemNameDbLoading = true
+  try {
+    const res = await fetch('https://db.sp-tarkov.com/api/item/names')
+    const data = await res.json()
+    itemNameDb = new Map()
+    for (const entry of data) {
+      const id = entry?.item?._id
+      const name = entry?.locale?.Name || entry?.locale?.ShortName
+      if (id && name) itemNameDb.set(id, name)
+    }
+  } catch {
+    itemNameDb = new Map()
+  }
+  itemNameDbLoading = false
+  itemNameDbListeners.forEach(fn => fn())
+  itemNameDbListeners = []
+}
+
+function useItemNames(itemIds: string[]) {
+  const [names, setNames] = useState<Map<string, string>>(new Map())
+
+  useEffect(() => {
+    if (itemIds.length === 0) return
+
+    const resolve = () => {
+      if (!itemNameDb) return
+      const result = new Map<string, string>()
+      itemIds.forEach(id => {
+        const name = itemNameDb!.get(id)
+        if (name) result.set(id, name)
+      })
+      setNames(result)
+    }
+
+    if (itemNameDb) {
+      resolve()
+    } else {
+      itemNameDbListeners.push(resolve)
+      loadItemNameDb()
+    }
+  }, [itemIds.join(',')])
+
+  return names
+}
 
 type Tab = 'general' | 'loyalty' | 'assort' | 'preview'
 
@@ -498,6 +550,9 @@ function AssortTab({ assort, loyaltyLevels, defaultCurrency, expanded, onToggle,
   onUpdateBarter: (ai: number, bi: number, key: keyof BarterRequirement, value: unknown) => void
   errors: ValidationError[]
 }) {
+  const itemIds = assort.map(a => a.itemTpl).filter(id => id.length === 24)
+  const itemNames = useItemNames(itemIds)
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -529,7 +584,7 @@ function AssortTab({ assort, loyaltyLevels, defaultCurrency, expanded, onToggle,
         </div>
       )}
 
-      <div className="space-y-2">
+      <div className="space-y-2" id="assort-list-top">
         {assort.map((item, i) => {
           const isExpanded = expanded.has(i)
           const itemErrors = errors.filter(e => e.field.startsWith(`assort.${i}`))
@@ -552,6 +607,11 @@ function AssortTab({ assort, loyaltyLevels, defaultCurrency, expanded, onToggle,
                   ) : (
                     <span className="text-xs text-tarkov-text-dim">
                       {item.price} {item.currency || defaultCurrency}
+                    </span>
+                  )}
+                  {itemNames.get(item.itemTpl) && (
+                    <span className="text-xs text-tarkov-text italic truncate max-w-[200px]">
+                      {itemNames.get(item.itemTpl)}
                     </span>
                   )}
                   {itemErrors.length > 0 && (
@@ -688,6 +748,18 @@ function AssortTab({ assort, loyaltyLevels, defaultCurrency, expanded, onToggle,
           )
         })}
       </div>
+
+      {assort.length > 3 && (
+        <div className="flex items-center justify-center gap-4 pt-4">
+          <button onClick={() => document.getElementById('assort-list-top')?.scrollIntoView({ behavior: 'smooth' })}
+            className="btn-secondary text-sm flex items-center gap-1.5">
+            <ChevronUp size={14} /> Back to Top
+          </button>
+          <button onClick={onAdd} className="btn-primary text-sm flex items-center gap-1.5">
+            <Plus size={14} /> Add Item
+          </button>
+        </div>
+      )}
     </div>
   )
 }
