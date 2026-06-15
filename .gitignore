@@ -1,0 +1,74 @@
+###################
+# Visual Studio / IDE
+###################
+
+*.rsuser
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+.vs/
+.idea/
+*.sln.iml
+*.psess
+*.vsp
+*.vspx
+*.sap
+_ReSharper*/
+*.[Rr]e[Ss]harper
+*.DotSettings.user
+
+###################
+# Build outputs
+###################
+
+[Dd]ebug/
+[Rr]elease/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+Server/Build/
+
+###################
+# .NET / NuGet
+###################
+
+*.nupkg
+*.snupkg
+**/packages/*
+!**/packages/build/
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+###################
+# Node / Tool
+###################
+
+node_modules/
+Tool/dist/
+Tool/.vite/
+
+###################
+# TraderGen specific
+###################
+
+# References (not part of the project)
+ref/
+
+# Temp files generated during trader registration
+.tradergen_base_*.json
+
+###################
+# OS Files
+###################
+
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.DS_Store
+.AppleDouble
+.LSOverride
+*~
+.directory

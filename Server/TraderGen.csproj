@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <RootNamespace>TraderGen</RootNamespace>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <GenerateAssemblyTitleAttribute>false</GenerateAssemblyTitleAttribute>
+    <GenerateAssemblyFileVersionAttribute>false</GenerateAssemblyFileVersionAttribute>
+    <OutputType>Library</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="SPTarkov.Common" Version="4.0.13" />
+    <PackageReference Include="SPTarkov.DI" Version="4.0.13" />
+    <PackageReference Include="SPTarkov.Server.Core" Version="4.0.13" />
+  </ItemGroup>
+
+  <!-- Copy DLL to build output folder for easy deployment -->
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+    <MakeDir Directories="$(ProjectDir)Build\SPT\user\mods\TraderGen" />
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(ProjectDir)Build\SPT\user\mods\TraderGen" />
+  </Target>
+</Project>

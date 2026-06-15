@@ -1,0 +1,45 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #3a3a3a #1a1a1a;
+  }
+
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button {
+    opacity: 1;
+  }
+}
+
+@layer components {
+  .input-field {
+    @apply w-full bg-tarkov-bg border border-tarkov-border rounded px-3 py-2 text-tarkov-text
+      focus:outline-none focus:border-tarkov-accent transition-colors;
+  }
+
+  .btn-primary {
+    @apply bg-tarkov-accent text-tarkov-bg font-semibold px-4 py-2 rounded
+      hover:bg-tarkov-accent-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-secondary {
+    @apply bg-tarkov-surface border border-tarkov-border text-tarkov-text px-4 py-2 rounded
+      hover:border-tarkov-accent transition-colors;
+  }
+
+  .btn-danger {
+    @apply bg-tarkov-error/20 border border-tarkov-error/50 text-tarkov-error px-4 py-2 rounded
+      hover:bg-tarkov-error/30 transition-colors;
+  }
+
+  .card {
+    @apply bg-tarkov-surface border border-tarkov-border rounded-lg p-4;
+  }
+
+  .label {
+    @apply block text-sm font-medium text-tarkov-text-dim mb-1;
+  }
+}

@@ -1,0 +1,173 @@
+{
+  // ============================================================
+  // EXAMPLE TRADER PACK — "Viktor the Collector"
+  // This file demonstrates the TraderGen JSON format.
+  // Place this folder in: user/mods/TraderGen/traders/
+  // ============================================================
+
+  // Unique 24-character hex ID. Generate one at: https://www.uuidtools.com/generate/v4
+  // or use the TraderGen Tool to auto-generate one.
+  "id": "aabbccdd11223344eeff5566",
+
+  // Display name shown in the trader list
+  "nickname": "Viktor",
+
+  // Name parts used in locale data
+  "firstName": "Viktor",
+  "lastName": "Kozlov",
+  "fullName": "Viktor Kozlov",
+
+  // Location text shown on the trader screen
+  "location": "Customs Warehouse District",
+
+  // Description shown when clicking the trader info button
+  "description": "A former factory foreman who turned to trading surplus military equipment. Viktor is reliable but drives a hard bargain. He specializes in basic weapons and protective gear.",
+
+  // Relative path to the avatar image inside this trader pack folder
+  // The image should be a .jpg file, ideally 332x332 pixels
+  "avatar": "assets/avatar.jpg",
+
+  // Default currency: "RUB", "USD", or "EUR"
+  "currency": "RUB",
+
+  // Whether the trader is available from the start
+  "unlockedByDefault": true,
+
+  // Whether the trader buys items from the player
+  "buyerEnabled": true,
+
+  // Whether the trader appears on the flea market
+  "ragfairEnabled": true,
+
+  // Trader's cash balances
+  "balanceRub": 3000000,
+  "balanceDol": 0,
+  "balanceEur": 0,
+
+  // How often the trader restocks (in seconds)
+  "refreshTimeMin": 1800,
+  "refreshTimeMax": 7200,
+
+  // Insurance and repair (most custom traders don't need these)
+  "insuranceEnabled": false,
+  "repairEnabled": false,
+
+  // Loyalty levels — players unlock higher tiers by leveling up and spending money
+  "loyaltyLevels": [
+    {
+      "level": 1,
+      "minLevel": 1,
+      "minSalesSum": 0,
+      "minStanding": 0,
+      "buyPriceCoef": 40
+    },
+    {
+      "level": 2,
+      "minLevel": 15,
+      "minSalesSum": 500000,
+      "minStanding": 0,
+      "buyPriceCoef": 45
+    },
+    {
+      "level": 3,
+      "minLevel": 25,
+      "minSalesSum": 1500000,
+      "minStanding": 0,
+      "buyPriceCoef": 50
+    }
+  ],
+
+  // Items the trader sells
+  "assort": [
+    // --- LL1: Basic items for money ---
+    {
+      // IFAK individual first aid kit
+      "itemTpl": "590c678286f77426c9660122",
+      "loyaltyLevel": 1,
+      "stock": 50,
+      "unlimitedStock": false,
+      "price": 15000,
+      "currency": "RUB"
+    },
+    {
+      // Army bandage
+      "itemTpl": "5751a25924597722c463c472",
+      "loyaltyLevel": 1,
+      "stock": 999999,
+      "unlimitedStock": true,
+      "price": 3500,
+      "currency": "RUB"
+    },
+    {
+      // 5.45x39mm PS gs ammo
+      "itemTpl": "56dff3afd2720bba668b4567",
+      "loyaltyLevel": 1,
+      "stock": 999999,
+      "unlimitedStock": true,
+      "price": 89,
+      "currency": "RUB"
+    },
+
+    // --- LL1: Barter trade example ---
+    {
+      // Trade 2x iskra lunch boxes for an MRE
+      "itemTpl": "590c5d4b86f774784e1b9c45",
+      "loyaltyLevel": 1,
+      "stock": 10,
+      "unlimitedStock": false,
+      "barter": [
+        {
+          "itemTpl": "544fb6cc4bdc2d34748b456e",
+          "count": 2
+        }
+      ]
+    },
+
+    // --- LL2: Better items ---
+    {
+      // 5.45x39mm BT gs ammo
+      "itemTpl": "56dff061d2720bb5668b4567",
+      "loyaltyLevel": 2,
+      "stock": 300,
+      "unlimitedStock": false,
+      "price": 350,
+      "currency": "RUB"
+    },
+    {
+      // Salewa first aid kit
+      "itemTpl": "544fb45d4bdc2dee738b4568",
+      "loyaltyLevel": 2,
+      "stock": 30,
+      "unlimitedStock": false,
+      "price": 25000,
+      "currency": "RUB"
+    },
+
+    // --- LL2: Barter with buy limit ---
+    {
+      // Trade dollars + dog tag for a helmet
+      "itemTpl": "5b432d215acfc4771e1c6624",
+      "loyaltyLevel": 2,
+      "stock": 5,
+      "unlimitedStock": false,
+      "buyLimit": 2,
+      "barter": [
+        {
+          "itemTpl": "5696686a4bdc2da3298b456a",
+          "count": 150
+        }
+      ]
+    },
+
+    // --- LL3: Premium items ---
+    {
+      // M855A1 5.56x45mm ammo
+      "itemTpl": "54527ac44bdc2d36668b4567",
+      "loyaltyLevel": 3,
+      "stock": 200,
+      "unlimitedStock": false,
+      "price": 8,
+      "currency": "USD"
+    }
+  ]
+}
