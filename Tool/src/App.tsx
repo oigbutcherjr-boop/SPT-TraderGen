@@ -112,38 +112,89 @@ export default function App() {
     setTimeout(() => setShowExportSuccess(false), 3000)
   }, [trader, validate])
 
+  const importFromJson = useCallback((jsonStr: string, packName?: string, avatarDataUrl?: string) => {
+    try {
+      const raw = jsonStr
+        .replace(/\/\/.*$/gm, '')   // strip single-line comments
+        .replace(/\/\*[\s\S]*?\*\//g, '') // strip block comments
+        .replace(/,\s*([\]}])/g, '$1') // strip trailing commas
+      const parsed = JSON.parse(raw)
+      const merged = { ...createDefaultTrader(), ...parsed }
+      if (packName) merged.packName = packName
+      if (avatarDataUrl) merged.avatarDataUrl = avatarDataUrl
+      if (merged.assort) {
+        merged.assort = merged.assort.map((a: AssortItem) => ({
+          ...createDefaultAssortItem(),
+          ...a,
+        }))
+      }
+      setTrader(merged)
+      setErrors([])
+    } catch {
+      alert('Failed to parse JSON file. Check the file format.')
+    }
+  }, [])
+
   const handleImport = useCallback(() => {
     const input = document.createElement('input')
     input.type = 'file'
-    input.accept = '.json'
-    input.onchange = (e) => {
+    input.accept = '.json,.zip'
+    input.onchange = async (e) => {
       const file = (e.target as HTMLInputElement).files?.[0]
       if (!file) return
-      const reader = new FileReader()
-      reader.onload = (ev) => {
+
+      if (file.name.endsWith('.zip')) {
         try {
-          const raw = (ev.target?.result as string)
-            .replace(/\/\/.*$/gm, '')   // strip single-line comments
-            .replace(/\/\*[\s\S]*?\*\//g, '') // strip block comments
-            .replace(/,\s*([\]}])/g, '$1') // strip trailing commas
-          const parsed = JSON.parse(raw)
-          const merged = { ...createDefaultTrader(), ...parsed }
-          if (merged.assort) {
-            merged.assort = merged.assort.map((a: AssortItem) => ({
-              ...createDefaultAssortItem(),
-              ...a,
-            }))
+          const zip = await JSZip.loadAsync(file)
+          let jsonFile: JSZip.JSZipObject | null = null
+          let avatarFile: JSZip.JSZipObject | null = null
+          let packName = ''
+
+          for (const [path, entry] of Object.entries(zip.files)) {
+            if (entry.dir) continue
+            if (path.endsWith('trader.json')) {
+              jsonFile = entry
+              const parts = path.split('/')
+              const traderIdx = parts.indexOf('traders')
+              if (traderIdx >= 0 && parts[traderIdx + 1]) {
+                packName = parts[traderIdx + 1]
+              } else if (parts.length >= 2) {
+                packName = parts[parts.length - 2]
+              }
+            }
+            if (path.match(/assets\/avatar\.(jpg|jpeg|png|webp)$/i)) {
+              avatarFile = entry
+            }
           }
-          setTrader(merged)
-          setErrors([])
+
+          if (!jsonFile) {
+            alert('No trader.json found in ZIP.')
+            return
+          }
+
+          const jsonStr = await jsonFile.async('string')
+          let avatarDataUrl: string | undefined
+          if (avatarFile) {
+            const base64 = await avatarFile.async('base64')
+            const ext = avatarFile.name.split('.').pop()?.toLowerCase() || 'jpg'
+            const mime = ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : 'image/jpeg'
+            avatarDataUrl = `data:${mime};base64,${base64}`
+          }
+
+          importFromJson(jsonStr, packName || undefined, avatarDataUrl)
         } catch {
-          alert('Failed to parse JSON file. Check the file format.')
+          alert('Failed to read ZIP file.')
         }
+      } else {
+        const reader = new FileReader()
+        reader.onload = (ev) => {
+          importFromJson(ev.target?.result as string)
+        }
+        reader.readAsText(file)
       }
-      reader.readAsText(file)
     }
     input.click()
-  }, [])
+  }, [importFromJson])
 
   const addLoyaltyLevel = useCallback(() => {
     setTrader(prev => {
@@ -258,9 +309,16 @@ export default function App() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={handleImport} className="btn-secondary text-sm flex items-center gap-1.5">
-            <RefreshCw size={14} /> Import JSON
-          </button>
+          <div className="relative group">
+            <button onClick={handleImport} className="btn-secondary text-sm flex items-center gap-1.5">
+              <RefreshCw size={14} /> Import (.json / .zip)
+            </button>
+            <div className="absolute right-0 top-full mt-2 w-64 bg-tarkov-surface border border-tarkov-border rounded-lg p-3 text-xs text-tarkov-text-dim shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity z-50">
+              <p className="font-medium text-tarkov-text mb-1">Import a trader pack</p>
+              <p><span className="text-tarkov-accent">.zip</span> — Loads trader data, pack name, and avatar image.</p>
+              <p className="mt-1"><span className="text-tarkov-accent">.json</span> — Loads trader data only. Pack name and avatar must be set manually.</p>
+            </div>
+          </div>
           <button onClick={() => { setTrader(createDefaultTrader()); setErrors([]) }}
             className="btn-secondary text-sm flex items-center gap-1.5">
             <Plus size={14} /> New Trader
