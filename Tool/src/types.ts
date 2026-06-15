@@ -1,4 +1,7 @@
 export interface TraderDefinition {
+  // Tool-only fields (not exported to trader JSON)
+  packName: string
+  avatarDataUrl?: string
   enabled: boolean
   id: string
   nickname: string
@@ -54,6 +57,8 @@ export interface ValidationError {
 
 export function createDefaultTrader(): TraderDefinition {
   return {
+    packName: 'MyTraderPack',
+    avatarDataUrl: undefined,
     enabled: true,
     id: generateMongoId(),
     nickname: '',

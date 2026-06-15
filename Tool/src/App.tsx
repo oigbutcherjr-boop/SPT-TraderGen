@@ -2,8 +2,10 @@ import { useState, useCallback, useEffect } from 'react'
 import {
   Store, Plus, Trash2, Download, AlertCircle, CheckCircle,
   ChevronDown, ChevronUp, Copy, RefreshCw, Eye, Package,
-  Shield, Star, Settings, FileJson, HelpCircle, ExternalLink,
+  Shield, Star, Settings, FileJson, HelpCircle, ExternalLink, Upload,
 } from 'lucide-react'
+import JSZip from 'jszip'
+import { saveAs } from 'file-saver'
 import type {
   TraderDefinition, AssortItem, LoyaltyLevel, BarterRequirement, ValidationError,
 } from './types'
@@ -91,13 +93,21 @@ export default function App() {
     }
     const json = buildExportJson(trader)
     const jsonStr = JSON.stringify(json, null, 2)
-    const blob = new Blob([jsonStr], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = 'trader.json'
-    a.click()
-    URL.revokeObjectURL(url)
+    const packName = trader.packName.trim() || 'MyTraderPack'
+    const basePath = `SPT/user/mods/TraderGen/traders/${packName}`
+
+    const zip = new JSZip()
+    zip.file(`${basePath}/trader.json`, jsonStr)
+
+    if (trader.avatarDataUrl) {
+      const match = trader.avatarDataUrl.match(/^data:image\/\w+;base64,(.+)$/)
+      if (match) {
+        zip.file(`${basePath}/assets/avatar.jpg`, match[1], { base64: true })
+      }
+    }
+
+    const blob = await zip.generateAsync({ type: 'blob' })
+    saveAs(blob, `${packName}.zip`)
     setShowExportSuccess(true)
     setTimeout(() => setShowExportSuccess(false), 3000)
   }, [trader, validate])
@@ -264,7 +274,7 @@ export default function App() {
       {/* Success toast */}
       {showExportSuccess && (
         <div className="fixed top-4 right-4 z-50 bg-tarkov-success/20 border border-tarkov-success/50 text-tarkov-success px-4 py-3 rounded-lg flex items-center gap-2 shadow-lg">
-          <CheckCircle size={18} /> trader.json exported successfully!
+          <CheckCircle size={18} /> Trader pack exported as ZIP!
         </div>
       )}
 
@@ -400,14 +410,62 @@ function GeneralTab({ trader, update, hasError, errorsByField }: {
           </Field>
         </div>
 
-        <div className="mt-4">
-          <Field label="Avatar Path" error={hasError('avatar')} tooltip="Relative path to the trader's portrait image inside the trader pack folder. Should be a 332x332 pixel .jpg file.">
-            <input className="input-field" value={trader.avatar}
-              onChange={e => update('avatar', e.target.value)} placeholder="assets/avatar.jpg" />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+          <Field label="Pack Name" tooltip="The name of the trader pack folder. This becomes the folder name inside TraderGen/traders/ and the ZIP filename on export.">
+            <input className="input-field" value={trader.packName}
+              onChange={e => update('packName', e.target.value.replace(/[^a-zA-Z0-9_-]/g, ''))}
+              placeholder="MyTraderPack" />
             <p className="text-xs text-tarkov-text-dim mt-1">
-              Relative path inside the trader pack folder. Image should be 332x332 .jpg
+              Letters, numbers, dashes and underscores only
             </p>
-            <FieldErrors errors={errorsByField('avatar')} />
+          </Field>
+
+          <Field label="Trader Avatar" tooltip="Drag and drop or click to upload the trader portrait. Should be a square image (332x332 recommended).">
+            <div
+              className={`relative border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors
+                ${trader.avatarDataUrl ? 'border-tarkov-accent/50 bg-tarkov-accent/5' : 'border-tarkov-border hover:border-tarkov-accent/40'}`}
+              onDragOver={e => { e.preventDefault(); e.stopPropagation() }}
+              onDrop={e => {
+                e.preventDefault(); e.stopPropagation()
+                const file = e.dataTransfer.files?.[0]
+                if (file?.type.startsWith('image/')) {
+                  const reader = new FileReader()
+                  reader.onload = ev => update('avatarDataUrl', ev.target?.result as string)
+                  reader.readAsDataURL(file)
+                }
+              }}
+              onClick={() => {
+                const input = document.createElement('input')
+                input.type = 'file'
+                input.accept = 'image/*'
+                input.onchange = e => {
+                  const file = (e.target as HTMLInputElement).files?.[0]
+                  if (file) {
+                    const reader = new FileReader()
+                    reader.onload = ev => update('avatarDataUrl', ev.target?.result as string)
+                    reader.readAsDataURL(file)
+                  }
+                }
+                input.click()
+              }}
+            >
+              {trader.avatarDataUrl ? (
+                <div className="flex items-center gap-4">
+                  <img src={trader.avatarDataUrl} alt="Avatar preview"
+                    className="w-16 h-16 rounded object-cover border border-tarkov-border" />
+                  <div className="text-left">
+                    <p className="text-sm text-tarkov-text">Image loaded</p>
+                    <p className="text-xs text-tarkov-text-dim">Click or drag to replace</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="py-2">
+                  <Upload size={24} className="mx-auto text-tarkov-text-dim mb-2" />
+                  <p className="text-sm text-tarkov-text-dim">Drag & drop an image or click to browse</p>
+                  <p className="text-xs text-tarkov-text-dim mt-1">Recommended: 332×332 px</p>
+                </div>
+              )}
+            </div>
           </Field>
         </div>
       </section>
