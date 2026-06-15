@@ -11,11 +11,11 @@ using Path = System.IO.Path;
 
 namespace TraderGen.Services;
 
-/// <summary>
-/// Discovers and loads trader definition JSON files from:
-///   1. The TraderGen/traders/ folder (user-placed packs)
-///   2. Other mod folders that register themselves as trader packs
-/// </summary>
+
+// Discovers and loads trader definition JSON files from:
+//   1. The TraderGen/traders/ folder (user-placed packs)
+//   2. Other mod folders that register themselves as trader packs
+
 [Injectable(TypePriority = OnLoadOrder.PostDBModLoader + 1)]
 public class TraderLoader(ISptLogger<TraderLoader> logger, ModHelper modHelper)
 {
@@ -26,16 +26,12 @@ public class TraderLoader(ISptLogger<TraderLoader> logger, ModHelper modHelper)
         AllowTrailingCommas = true,
     };
 
-    /// <summary>
-    /// Holds a loaded trader definition along with its source path information.
-    /// </summary>
+    // Holds a loaded trader definition along with its source path information.
     public record LoadedTrader(TraderDefinition Definition, string SourceFile, string PackFolder);
 
-    /// <summary>
-    /// Load all trader definitions from the TraderGen/traders/ directory.
-    /// Each subfolder is treated as a trader pack.
-    /// Also loads any loose .json files directly in the traders/ folder.
-    /// </summary>
+    // Load all trader definitions from the TraderGen/traders/ directory.
+    // Each subfolder is treated as a trader pack.
+    // Also loads any loose .json files directly in the traders/ folder.
     public List<LoadedTrader> LoadAllTraders()
     {
         var results = new List<LoadedTrader>();
@@ -77,10 +73,8 @@ public class TraderLoader(ISptLogger<TraderLoader> logger, ModHelper modHelper)
         return results;
     }
 
-    /// <summary>
-    /// Load a single trader definition from another mod's folder.
-    /// Other mods can call this to register their own trader packs.
-    /// </summary>
+    // Load a single trader definition from another mod's folder.
+    // Other mods can call this to register their own trader packs.
     public LoadedTrader? LoadTraderFromPath(string jsonFilePath, string packFolder)
     {
         return TryLoadTraderFile(jsonFilePath, packFolder);

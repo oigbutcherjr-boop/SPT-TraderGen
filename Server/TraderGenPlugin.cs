@@ -9,17 +9,14 @@ using TraderGen.Services;
 
 namespace TraderGen;
 
-/// <summary>
-/// Mod metadata — tells SPT about this mod's identity and version requirements.
-/// </summary>
 public record ModMetadata : AbstractModMetadata
 {
-    public override string ModGuid { get; init; } = "tradergen.framework";
+    public override string ModGuid { get; init; } = "com.serenity.tradergen";
     public override string Name { get; init; } = "TraderGen";
-    public override string Author { get; init; } = "TraderGen";
+    public override string Author { get; init; } = "Serenity";
     public override List<string>? Contributors { get; init; }
     public override SemanticVersioning.Version Version { get; init; } = new("1.0.0");
-    public override SemanticVersioning.Range SptVersion { get; init; } = new("~4.0.0");
+    public override SemanticVersioning.Range SptVersion { get; init; } = new("4.0.13");
     public override List<string>? Incompatibilities { get; init; }
     public override Dictionary<string, SemanticVersioning.Range>? ModDependencies { get; init; }
     public override string? Url { get; init; }
@@ -27,10 +24,6 @@ public record ModMetadata : AbstractModMetadata
     public override string? License { get; init; } = "MIT";
 }
 
-/// <summary>
-/// Main entry point for the TraderGen framework mod.
-/// Runs after the database is loaded and registers all discovered trader packs.
-/// </summary>
 [Injectable(TypePriority = OnLoadOrder.PostDBModLoader + 1)]
 public class TraderGenPlugin(
     ISptLogger<TraderGenPlugin> logger,

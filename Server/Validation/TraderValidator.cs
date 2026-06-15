@@ -2,10 +2,9 @@ using TraderGen.Models;
 
 namespace TraderGen.Validation;
 
-/// <summary>
-/// Validates TraderDefinition objects and returns a list of error messages.
-/// Designed to give clear, actionable feedback for non-programmers.
-/// </summary>
+
+// Validates TraderDefinition objects and returns a list of error messages, designed to give clear, actionable feedback for non-programmers.
+
 public static class TraderValidator
 {
     public static List<string> Validate(TraderDefinition trader, string sourceFile)
@@ -153,9 +152,7 @@ public static class TraderValidator
         return errors;
     }
 
-    /// <summary>
-    /// Quick check for warnings (non-fatal issues).
-    /// </summary>
+    // Quick check for warnings (non-fatal issues).
     public static List<string> GetWarnings(TraderDefinition trader, string sourceFile)
     {
         var warnings = new List<string>();

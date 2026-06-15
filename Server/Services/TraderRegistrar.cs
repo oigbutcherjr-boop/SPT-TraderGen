@@ -17,10 +17,8 @@ using Path = System.IO.Path;
 
 namespace TraderGen.Services;
 
-/// <summary>
-/// Registers loaded trader definitions into the SPT database.
-/// Handles: base data, assort, barter schemes, loyalty levels, locales, images, ragfair, refresh config.
-/// </summary>
+// Registers loaded trader definitions into the SPT database.
+// Handles: base data, assort, barter schemes, loyalty levels, locales, images, ragfair, refresh config.
 [Injectable(TypePriority = OnLoadOrder.PostDBModLoader + 1)]
 public class TraderRegistrar(
     ISptLogger<TraderRegistrar> logger,
@@ -34,48 +32,14 @@ public class TraderRegistrar(
     private readonly TraderConfig _traderConfig = configServer.GetConfig<TraderConfig>();
     private readonly RagfairConfig _ragfairConfig = configServer.GetConfig<RagfairConfig>();
 
-    /// <summary>
-    /// Default buy categories if the trader pack doesn't specify any.
-    /// These cover common item types (weapons, ammo, gear, meds, etc.)
-    /// </summary>
+    // Default buy categories if the trader pack doesn't specify any.
+    // These cover common item types (weapons, ammo, gear, meds, etc.)
     private static readonly List<string> DefaultBuyCategories =
     [
-        "57864c8c245977548867e7f1", // Weapon parts
-        "5671435f4bdc2d96058b4569", // Containers
-        "5795f317245977243854e041", // Ammunition packs
-        "57864ada245977548638de91", // Weapon accessories
-        "543be6564bdc2df4348b4568", // Throwables
-        "57bef4c42459772e8d35a53b", // Equipment
-        "57864a66245977548f04a81f", // Weapon mods
-        "5447e1d04bdc2dff2f8b4567", // Knives
-        "57864ee62459775490116fc1", // Sights
-        "5448e53e4bdc2d60728b4567", // Backpacks
-        "57864bb7245977548b3b66c2", // Magazines
-        "5447b6194bdc2d67278b4567", // Assault rifles
-        "5448e5284bdc2dcb718b4567", // Vests
-        "5448eb774bdc2d0a728b4567", // Barrels
-        "543be6674bdc2df1348b4569", // Food & drink
-        "5447b6094bdc2dc3278b4567", // Bolt-action rifles
-        "5448fe124bdc2da5018b4567", // Headphones
-        "5447e0e74bdc2d3c308b4567", // SMGs
-        "57864e4c24597754843f8723", // Suppressors
-        "543be5e94bdc2df1348b4568", // Meds
-        "5448f3a64bdc2d60728b456a", // Armored rigs
-        "543be5f84bdc2dd4348b456a", // Armor
-        "57864a3d24597754843f8721", // Grips
-        "543be5664bdc2dd4348b4569", // Helmets
-        "5448ecbe4bdc2d60728b4568", // Info
-        "567849dd4bdc2d150f8b456e", // Maps
-        "5447b6254bdc2dc3278b4568", // Assault carbines
-        "5485a8684bdc2da71d8b4567", // Ammo
-        "5448e54d4bdc2dcc718b4568", // Armor
-        "5422acb9af1c889c16000029", // Weapons
+        "5d1c819a86f774771b0acd6c", // Weapon parts
     ];
 
-    /// <summary>
-    /// Register a single trader from a loaded trader definition.
-    /// This is the main entry point that wires everything together.
-    /// </summary>
+    // Register a single trader from a loaded trader definition.
     public bool RegisterTrader(TraderLoader.LoadedTrader loaded)
     {
         var trader = loaded.Definition;
@@ -83,28 +47,28 @@ public class TraderRegistrar(
 
         try
         {
-            // 1. Build the TraderBase object (SPT's internal representation)
+            // Build the TraderBase object
             var traderBase = BuildTraderBase(trader, packFolder);
 
-            // 2. Register the avatar image route
+            // Register the avatar image route
             RegisterAvatar(trader, traderBase, packFolder);
 
-            // 3. Set trader refresh/update time in config
+            // Set trader refresh/update time in config
             SetTraderUpdateTime(traderBase, trader.RefreshTimeMin, trader.RefreshTimeMax);
 
-            // 4. Enable ragfair if requested
+            // Enable ragfair if requested
             if (trader.RagfairEnabled)
             {
                 _ragfairConfig.Traders.TryAdd(traderBase.Id, true);
             }
 
-            // 5. Add the trader with empty assort to the database
+            // Add the trader with empty assort to the database
             AddTraderToDatabase(traderBase);
 
-            // 6. Add locale entries (name, description, etc.)
+            // Add locale entries (name, description, etc.)
             AddTraderLocales(traderBase, trader);
 
-            // 7. Build and assign the assort (items, barter schemes, loyalty levels)
+            // Build and assign the assort (items, barter schemes, loyalty levels)
             BuildAndAssignAssort(trader);
 
             logger.LogWithColor(
@@ -123,11 +87,7 @@ public class TraderRegistrar(
         }
     }
 
-    /// <summary>
-    /// Build the TraderBase object from the simplified trader definition.
-    /// We generate a base.json file matching SPT's expected format (same structure as Saria base.json)
-    /// and load it via ModHelper to ensure full type compatibility with SPT's internal models.
-    /// </summary>
+    // Build the TraderBase object from the simplified trader definition.
     private TraderBase BuildTraderBase(TraderDefinition trader, string packFolder)
     {
         var buyCategories = trader.BuyCategories ?? DefaultBuyCategories;
@@ -238,10 +198,8 @@ public class TraderRegistrar(
         return traderBase;
     }
 
-    /// <summary>
-    /// Register the trader's avatar image with the SPT image router.
-    /// Looks for the avatar file relative to the trader pack folder.
-    /// </summary>
+    // Register the trader's avatar image with the SPT image router.
+    // Looks for the avatar file relative to the trader pack folder.
     private void RegisterAvatar(TraderDefinition trader, TraderBase traderBase, string packFolder)
     {
         var avatarRelPath = trader.Avatar.Replace('/', Path.DirectorySeparatorChar);
@@ -261,9 +219,7 @@ public class TraderRegistrar(
         imageRouter.AddRoute(routePath, avatarAbsPath);
     }
 
-    /// <summary>
-    /// Configure how often the trader's inventory refreshes.
-    /// </summary>
+    // Configure how often the trader's inventory refreshes.
     private void SetTraderUpdateTime(TraderBase traderBase, int minSeconds, int maxSeconds)
     {
         var updateTime = new UpdateTime
@@ -274,9 +230,7 @@ public class TraderRegistrar(
         _traderConfig.UpdateTime.Add(updateTime);
     }
 
-    /// <summary>
-    /// Add the trader to the database with an empty assort (assort is filled later).
-    /// </summary>
+    // Add the trader to the database with an empty assort (assort is filled later).
     private void AddTraderToDatabase(TraderBase traderBase)
     {
         var emptyAssort = new TraderAssort
@@ -308,10 +262,7 @@ public class TraderRegistrar(
         }
     }
 
-    /// <summary>
-    /// Add locale entries for all languages so the trader's name and description display correctly.
-    /// SPT uses lazy-loaded locale data with transformers.
-    /// </summary>
+    // Add locale entries for all languages so the trader's name and description display correctly.
     private void AddTraderLocales(TraderBase traderBase, TraderDefinition trader)
     {
         var locales = databaseService.GetTables().Locales.Global;
@@ -331,10 +282,8 @@ public class TraderRegistrar(
         }
     }
 
-    /// <summary>
-    /// Build the trader's assort (items for sale) and assign it to the database.
-    /// Each assort item gets: an Item entry, a BarterScheme entry, and a LoyalLevelItems entry.
-    /// </summary>
+    // Build the trader's assort (items for sale) and assign it to the database.
+    // Each assort item gets: an Item entry, a BarterScheme entry, and a LoyalLevelItems entry.
     private void BuildAndAssignAssort(TraderDefinition trader)
     {
         var traderData = databaseService.GetTables().Traders.GetValueOrDefault(trader.Id);
@@ -391,10 +340,8 @@ public class TraderRegistrar(
         }
     }
 
-    /// <summary>
-    /// Build the barter scheme for a single assort item.
-    /// If barter requirements are specified, use those. Otherwise, use money price.
-    /// </summary>
+    // Build the barter scheme for a single assort item.
+    // If barter requirements are specified, use those. Otherwise, use money price.
     private List<List<BarterScheme>> BuildBarterScheme(AssortItemDefinition assortItem, string defaultCurrency)
     {
         var schemeItems = new List<BarterScheme>();
