@@ -394,11 +394,7 @@ public static class RepeatableQuestGenerator
         // Add location condition
         if (!string.IsNullOrWhiteSpace(location) && location != "any")
         {
-            var locTargets = new List<string> { location };
-            if (string.Equals(location, "Sandbox", StringComparison.OrdinalIgnoreCase))
-                locTargets.Add("Sandbox_high");
-            else if (string.Equals(location, "Sandbox_high", StringComparison.OrdinalIgnoreCase))
-                locTargets.Add("Sandbox");
+            var locTargets = BuildLocationTargets(location);
             counterConditions.Add(new QuestConditionCounterCondition
             {
                 Id = new MongoId(),
@@ -478,11 +474,7 @@ public static class RepeatableQuestGenerator
 
         if (!string.IsNullOrWhiteSpace(location) && location != "any")
         {
-            var locTargets = new List<string> { location };
-            if (string.Equals(location, "Sandbox", StringComparison.OrdinalIgnoreCase))
-                locTargets.Add("Sandbox_high");
-            else if (string.Equals(location, "Sandbox_high", StringComparison.OrdinalIgnoreCase))
-                locTargets.Add("Sandbox");
+            var locTargets = BuildLocationTargets(location);
             counterConditions.Add(new QuestConditionCounterCondition
             {
                 Id = new MongoId(),
@@ -620,5 +612,18 @@ public static class RepeatableQuestGenerator
         }
 
         return result;
+    }
+
+    // Returns a list of location target strings for counter conditions.
+    // Expands composite locations (Factory, Ground Zero) into their BSG variants.
+    private static List<string> BuildLocationTargets(string location)
+    {
+        if (string.Equals(location, "Sandbox", StringComparison.OrdinalIgnoreCase))
+            return new List<string> { "Sandbox", "Sandbox_high" };
+        if (string.Equals(location, "Sandbox_high", StringComparison.OrdinalIgnoreCase))
+            return new List<string> { "Sandbox_high", "Sandbox" };
+        if (string.Equals(location, "factory4", StringComparison.OrdinalIgnoreCase))
+            return new List<string> { "factory4_day", "factory4_night" };
+        return new List<string> { location };
     }
 }

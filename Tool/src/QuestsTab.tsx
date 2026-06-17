@@ -15,6 +15,14 @@ import {
   MAP_LOCATIONS, OBJECTIVE_TYPES, ENEMY_TARGETS, ROTATION_TYPES,
 } from './types'
 
+// Returns true if an objective location matches (or is compatible with) the quest location.
+// Only the composite 'factory4' quest location covers both day and night objectives.
+function locationsMatch(objLocation: string, questLocation: string): boolean {
+  if (objLocation === questLocation) return true
+  if (questLocation === 'factory4' && (objLocation === 'factory4_day' || objLocation === 'factory4_night')) return true
+  return false
+}
+
 // ==================== Shared sub-components ====================
 
 function Field({ label, error, tooltip, children }: {
@@ -409,7 +417,9 @@ function StoryQuestEditor({ quest, questIndex, allQuests, onChange, errors }: {
           .map(o => o.location)
           .filter((loc): loc is string => !!loc && loc !== 'any')
         const uniqueLocations = [...new Set(objectiveLocations)]
-        const needsAnyLocation = uniqueLocations.length > 1 && quest.location !== 'any'
+        // Factory composite covers both day and night; don't warn if quest is factory4
+        const isFactoryComposite = quest.location === 'factory4' && uniqueLocations.every(loc => locationsMatch(loc, quest.location))
+        const needsAnyLocation = uniqueLocations.length > 1 && quest.location !== 'any' && !isFactoryComposite
 
         return needsAnyLocation ? (
           <div className="bg-tarkov-accent/10 border border-tarkov-accent/30 rounded-lg p-3 mb-4">
@@ -515,7 +525,7 @@ function StoryQuestEditor({ quest, questIndex, allQuests, onChange, errors }: {
             const typeLabel = OBJECTIVE_TYPES.find(t => t.value === obj.type)?.label || obj.type
             const objLocation = obj.location
             const questLocation = quest.location
-            const locationMismatch = objLocation && questLocation !== 'any' && objLocation !== questLocation
+            const locationMismatch = objLocation && questLocation !== 'any' && !locationsMatch(objLocation, questLocation)
 
             return (
               <div key={oi} className={`bg-tarkov-bg rounded-lg border ${locationMismatch ? 'border-tarkov-error/50' : 'border-tarkov-border'}`}>

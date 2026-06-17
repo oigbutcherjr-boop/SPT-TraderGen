@@ -139,6 +139,7 @@ export interface RewardScaling {
 export const MAP_LOCATIONS = [
   { value: 'any', label: 'Any Location' },
   { value: 'bigmap', label: 'Customs' },
+  { value: 'factory4', label: 'Factory' },
   { value: 'factory4_day', label: 'Factory (Day)' },
   { value: 'factory4_night', label: 'Factory (Night)' },
   { value: 'Woods', label: 'Woods' },

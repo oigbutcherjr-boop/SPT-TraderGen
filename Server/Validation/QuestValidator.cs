@@ -40,6 +40,7 @@ public static class QuestValidator
     {
         "any",
         "bigmap",         // Customs
+        "factory4",       // Factory (Day or Night)
         "factory4_day",   // Factory (Day)
         "factory4_night", // Factory (Night)
         "Woods",

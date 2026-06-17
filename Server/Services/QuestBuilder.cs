@@ -179,7 +179,7 @@ public static class QuestBuilder
             ["_id"] = questId,
             ["traderId"] = quest.TraderId,
             ["type"] = questType,
-            ["location"] = LocationHelper.ToLocationDbId(quest.Location),
+            ["location"] = LocationHelper.ToQuestLocationId(quest.Location),
             ["image"] = $"/files/quest/icon/{iconFileName}",
             ["instantComplete"] = false,
             ["isKey"] = false,
@@ -413,12 +413,13 @@ public static class QuestBuilder
     // to ensure objectives track regardless of player level.
     private static JsonArray BuildLocationTargets(string location)
     {
-        var targets = new JsonArray { location };
         if (string.Equals(location, "Sandbox", StringComparison.OrdinalIgnoreCase))
-            targets.Add("Sandbox_high");
-        else if (string.Equals(location, "Sandbox_high", StringComparison.OrdinalIgnoreCase))
-            targets.Add("Sandbox");
-        return targets;
+            return new JsonArray { "Sandbox", "Sandbox_high" };
+        if (string.Equals(location, "Sandbox_high", StringComparison.OrdinalIgnoreCase))
+            return new JsonArray { "Sandbox_high", "Sandbox" };
+        if (string.Equals(location, "factory4", StringComparison.OrdinalIgnoreCase))
+            return new JsonArray { "factory4_day", "factory4_night" };
+        return new JsonArray { location };
     }
 
     // Reward builder

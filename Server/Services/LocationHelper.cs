@@ -8,6 +8,7 @@ public static class LocationHelper
         ["any"] = "Tarkov",
         ["bigmap"] = "Customs",
         ["factory4_day"] = "Factory (Day)",
+        ["factory4"] = "Factory",
         ["factory4_night"] = "Factory (Night)",
         ["Woods"] = "Woods",
         ["Shoreline"] = "Shoreline",
@@ -31,6 +32,7 @@ public static class LocationHelper
     {
         ["any"] = "any",
         ["factory4_day"] = "55f2d3fd4bdc2d5f408b4567",
+        ["factory4"] = "55f2d3fd4bdc2d5f408b4567",
         ["factory4_night"] = "59fc81d786f774390775787e",
         ["bigmap"] = "56f40101d2720b2a4d8b45d6",
         ["Woods"] = "5704e3c2d2720bac5b8b4567",

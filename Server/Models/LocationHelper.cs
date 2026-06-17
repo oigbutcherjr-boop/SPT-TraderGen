@@ -11,6 +11,7 @@ public static class LocationHelper
         ["any"] = "any",
         ["bigmap"] = "56f40101d2720b2a4d8b45d6",          // Customs
         ["factory4_day"] = "55f2d3fd4bdc2d5f408b4567",     // Factory (Day)
+        ["factory4"] = "55f2d3fd4bdc2d5f408b4567",        // Factory (either)
         ["factory4_night"] = "59fc81d786f774390775787e",    // Factory (Night)
         ["Woods"] = "5704e554d2720bac5b8b456e",            // Woods
         ["Shoreline"] = "5704e4dad2720bb55b8b4567",        // Shoreline
@@ -30,6 +31,7 @@ public static class LocationHelper
         ["any"] = "Any Location",
         ["bigmap"] = "Customs",
         ["factory4_day"] = "Factory",
+        ["factory4"] = "Factory",
         ["factory4_night"] = "Factory (Night)",
         ["Woods"] = "Woods",
         ["Shoreline"] = "Shoreline",
