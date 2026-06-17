@@ -6,21 +6,12 @@ using TraderGen.Models;
 
 namespace TraderGen.Services;
 
-// Translates simplified TraderGen quest definitions into the exact BSG quest format
-// expected by WTT-ServerCommonLib's CustomQuestService.
-// Outputs:
-//   - Quests/*.json   (BSG-format quest objects keyed by quest ID)
-//   - Locales/en.json (locale strings for quest names, descriptions, objective text)
-//   - QuestAssort/*.json (assort items unlocked by quests)
+// Translates TraderGen quest definitions into BSG quest format.
 public static class QuestBuilder
 {
     private static readonly Random Rng = new();
 
-    // Build all quest files for a trader and write them to the output directory.
-    // Takes story quests from the pack + resolved rotating quests (already concrete StoryQuestDefinitions).
-    // packFolder: the source trader pack folder (for resolving relative icon paths).
-    // defaultQuestIcon: pack-level default icon path (relative to packFolder), or null.
-    // Returns the number of quests successfully built.
+    // Build quest files for a trader.
     public static int BuildQuestFiles(
         string traderId,
         List<StoryQuestDefinition> allStoryQuests,
@@ -31,7 +22,7 @@ public static class QuestBuilder
     {
         var traderDir = Path.Combine(outputBaseDir, traderId);
 
-        // Create the WTT-expected directory structure
+        // Create directory structure
         var questsDir = Path.Combine(traderDir, "Quests");
         var localesDir = Path.Combine(traderDir, "Locales");
         var assortDir = Path.Combine(traderDir, "QuestAssort");
@@ -41,12 +32,12 @@ public static class QuestBuilder
         Directory.CreateDirectory(assortDir);
         Directory.CreateDirectory(imagesDir);
 
-        // Generate a default quest icon placeholder
+        // Generate default quest icon
         var defaultIconPath = Path.Combine(imagesDir, "default_quest_icon.png");
         if (!File.Exists(defaultIconPath))
             GenerateDefaultQuestIcon(defaultIconPath);
 
-        // Copy pack-level default icon if specified
+        // Copy default icon if specified
         if (!string.IsNullOrWhiteSpace(defaultQuestIcon))
         {
             var sourceIcon = Path.Combine(packFolder, defaultQuestIcon);
@@ -62,7 +53,7 @@ public static class QuestBuilder
         var questAssortSuccess = new JsonObject();
         var count = 0;
 
-        // Location name locale entries — the client looks up "{locationId} Name" for the map label
+        // Location locale entries
         allLocales["any Name"] = "Any location";
         allLocales["bigmap Name"] = "Customs";
         allLocales["factory4_day Name"] = "Factory (Day)";
@@ -80,7 +71,7 @@ public static class QuestBuilder
 
         foreach (var quest in allStoryQuests)
         {
-            // Resolve quest icon: per-quest image > pack default > generated placeholder
+            // Resolve quest icon
             var iconFileName = ResolveQuestIcon(quest, packFolder, defaultQuestIcon, imagesDir);
             var bsgQuest = BuildStoryQuest(quest, allLocales, iconFileName);
             allQuests[quest.Id] = bsgQuest;
@@ -173,7 +164,7 @@ public static class QuestBuilder
         // Determine quest type based on objectives
         var questType = DetermineQuestType(quest.Objectives);
 
-        // Build locale entries
+        // Build locales
         locales[$"{questId} name"] = quest.Name;
         locales[$"{questId} description"] = quest.Description;
         locales[$"{questId} successMessageText"] = quest.SuccessMessage;
@@ -181,7 +172,7 @@ public static class QuestBuilder
         locales[$"{questId} acceptPlayerMessage"] = quest.StartedMessage;
         locales[$"{questId} completePlayerMessage"] = quest.SuccessMessage;
 
-        // Build the BSG quest object
+        // Build BSG quest object
         return new JsonObject
         {
             ["QuestName"] = quest.Name,
@@ -222,7 +213,7 @@ public static class QuestBuilder
         };
     }
 
-    // ==================== Objective Condition Builders ====================
+    // Objective builders
 
     private static JsonNode BuildObjectiveCondition(QuestObjective obj, int index, JsonObject locales)
     {
@@ -318,7 +309,7 @@ public static class QuestBuilder
 
         var counterConditions = new JsonArray { killCond };
 
-        // Add location sub-condition if specified
+        // Add location condition
         if (!string.IsNullOrWhiteSpace(obj.Location))
         {
             var locCondId = GenerateId();
@@ -417,7 +408,7 @@ public static class QuestBuilder
         return BuildSurviveCondition(obj, index, locales);
     }
 
-    // ==================== Reward Builder ====================
+    // Reward builder
 
     private static JsonArray BuildRewards(QuestRewards rewards, string traderId)
     {
@@ -547,19 +538,16 @@ public static class QuestBuilder
         }
     }
 
-    // ==================== Icon Resolution ====================
+    // Icon resolution
 
-    // Resolve the quest icon filename for a quest.
-    // Priority: per-quest "image" field > pack-level "defaultQuestIcon" > generated placeholder.
-    // Copies the source image into the WTT Images/ directory if it exists.
-    // Returns just the filename (e.g. "quest_icon.png") for use in the image route path.
+    // Resolve quest icon filename.
     private static string ResolveQuestIcon(
         StoryQuestDefinition quest,
         string packFolder,
         string? defaultQuestIcon,
         string imagesDir)
     {
-        // 1. Per-quest icon
+        // Per-quest icon
         if (!string.IsNullOrWhiteSpace(quest.Image))
         {
             var source = Path.Combine(packFolder, quest.Image);
@@ -572,7 +560,7 @@ public static class QuestBuilder
             }
         }
 
-        // 2. Pack-level default icon
+        // Pack default icon
         if (!string.IsNullOrWhiteSpace(defaultQuestIcon))
         {
             var source = Path.Combine(packFolder, defaultQuestIcon);
@@ -582,11 +570,11 @@ public static class QuestBuilder
             }
         }
 
-        // 3. Generated placeholder
+        // Generated placeholder
         return "default_quest_icon.png";
     }
 
-    // ==================== Helpers ====================
+    // Helpers
 
     private static string DetermineQuestType(List<QuestObjective> objectives)
     {
@@ -628,11 +616,10 @@ public static class QuestBuilder
         };
     }
 
-    // Generate a minimal 1x1 pixel transparent PNG as a default quest icon placeholder.
-    // Users can replace this with their own icon in the trader pack's assets/ folder.
+    // Generate minimal transparent PNG placeholder.
     private static void GenerateDefaultQuestIcon(string path)
     {
-        // Minimal valid 1x1 transparent PNG (67 bytes)
+        // 1x1 transparent PNG (67 bytes)
         byte[] pngBytes =
         [
             0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, // PNG signature
@@ -648,7 +635,7 @@ public static class QuestBuilder
         File.WriteAllBytes(path, pngBytes);
     }
 
-    // Generate a 24-character hex ID (similar to MongoDB ObjectId).
+    // Generate 24-char hex ID.
     private static string GenerateId()
     {
         var bytes = new byte[12];

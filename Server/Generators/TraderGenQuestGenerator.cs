@@ -14,10 +14,7 @@ using TraderGen.Services;
 
 namespace TraderGen.Generators;
 
-/// <summary>
-/// Custom SPT quest generator that integrates TraderGen rotating quests into SPT's native repeatable quest system.
-/// Implements IRepeatableQuestGenerator so SPT calls this automatically during repeatable quest generation.
-/// </summary>
+// Custom SPT quest generator that integrates TraderGen rotating quests into SPT's native repeatable quest system.
 [Injectable]
 public class TraderGenQuestGenerator : IRepeatableQuestGenerator
 {
@@ -29,9 +26,7 @@ public class TraderGenQuestGenerator : IRepeatableQuestGenerator
     // Static storage for trader templates registered during plugin load
     private static readonly List<TraderGenData> _registeredTraders = new();
 
-    /// <summary>
-    /// Data about a loaded trader and their rotating quest templates
-    /// </summary>
+    // Data about a loaded trader and their rotating quest templates
     public class TraderGenData
     {
         public string TraderId { get; set; } = string.Empty;
@@ -54,10 +49,7 @@ public class TraderGenQuestGenerator : IRepeatableQuestGenerator
         Console.WriteLine($"[TG-Quests] Dependencies injected: logger={logger != null}, db={databaseService != null}, profile={profileHelper != null}, time={timeUtil != null}");
     }
 
-    /// <summary>
-    /// Registers a trader's quest templates with the generator.
-    /// Called by TraderGenPlugin during initialization.
-    /// </summary>
+    // Registers a trader's quest templates with the generator.
     public static void RegisterTrader(TraderGenData data)
     {
         Console.WriteLine($"[TG-Quests] RegisterTrader() called for {data.TraderId} with {data.Templates.Count} templates");
@@ -65,9 +57,7 @@ public class TraderGenQuestGenerator : IRepeatableQuestGenerator
         Console.WriteLine($"[TG-Quests] Total registered traders: {_registeredTraders.Count}");
     }
 
-    /// <summary>
-    /// Main entry point - SPT calls this to generate quests for TraderGen traders.
-    /// </summary>
+    // Main entry point
     public RepeatableQuest? Generate(
         MongoId sessionId,
         int pmcLevel,
@@ -84,7 +74,7 @@ public class TraderGenQuestGenerator : IRepeatableQuestGenerator
         if (traderData == null)
         {
             Console.WriteLine($"[TG-Quests] Trader {traderId} is NOT a TraderGen trader - skipping");
-            // Not a TraderGen trader - return null to let SPT handle it normally
+            // Not a TraderGen trader - return null
             return null;
         }
 
@@ -104,7 +94,6 @@ public class TraderGenQuestGenerator : IRepeatableQuestGenerator
         Console.WriteLine($"[TG-Quests] *** Trader {traderId} is UNLOCKED - generating quests ***");
 
         // Generate a quest using SPT's quest pool mechanism
-        // SPT will call this multiple times for each quest slot
         var playerId = pmcData.Id?.ToString() ?? sessionId.ToString();
         
         // Generate the next available quest that hasn't been added to the pool yet

@@ -17,8 +17,7 @@ using Path = System.IO.Path;
 
 namespace TraderGen.Services;
 
-// Registers loaded trader definitions into the SPT database.
-// Handles: base data, assort, barter schemes, loyalty levels, locales, images, ragfair, refresh config.
+// Registers trader definitions into the SPT database.
 [Injectable(TypePriority = OnLoadOrder.PostDBModLoader + 1)]
 public class TraderRegistrar(
     ISptLogger<TraderRegistrar> logger,
@@ -32,14 +31,13 @@ public class TraderRegistrar(
     private readonly TraderConfig _traderConfig = configServer.GetConfig<TraderConfig>();
     private readonly RagfairConfig _ragfairConfig = configServer.GetConfig<RagfairConfig>();
 
-    // Default buy categories if the trader pack doesn't specify any.
-    // These cover common item types (weapons, ammo, gear, meds, etc.)
+    // Default buy categories.
     private static readonly List<string> DefaultBuyCategories =
     [
         "5d1c819a86f774771b0acd6c", // Weapon parts
     ];
 
-    // Register a single trader from a loaded trader definition.
+    // Register a single trader.
     public bool RegisterTrader(TraderLoader.LoadedTrader loaded)
     {
         var trader = loaded.Definition;
@@ -47,28 +45,28 @@ public class TraderRegistrar(
 
         try
         {
-            // Build the TraderBase object
+            // Build TraderBase
             var traderBase = BuildTraderBase(trader, packFolder);
 
-            // Register the avatar image route
+            // Register avatar
             RegisterAvatar(trader, traderBase, packFolder);
 
-            // Set trader refresh/update time in config
+            // Set refresh time
             SetTraderUpdateTime(traderBase, trader.RefreshTimeMin, trader.RefreshTimeMax);
 
-            // Enable ragfair if requested
+            // Enable ragfair
             if (trader.RagfairEnabled)
             {
                 _ragfairConfig.Traders.TryAdd(traderBase.Id, true);
             }
 
-            // Add the trader with empty assort to the database
+            // Add trader to database
             AddTraderToDatabase(traderBase);
 
-            // Add locale entries (name, description, etc.)
+            // Add locale entries
             AddTraderLocales(traderBase, trader);
 
-            // Build and assign the assort (items, barter schemes, loyalty levels)
+            // Build and assign assort
             BuildAndAssignAssort(trader);
 
             logger.LogWithColor(
@@ -87,7 +85,7 @@ public class TraderRegistrar(
         }
     }
 
-    // Build the TraderBase object from the simplified trader definition.
+    // Build TraderBase from trader definition.
     private TraderBase BuildTraderBase(TraderDefinition trader, string packFolder)
     {
         var buyCategories = trader.BuyCategories ?? DefaultBuyCategories;
@@ -99,7 +97,7 @@ public class TraderRegistrar(
             _ => "RUB"
         };
 
-        // Build the base.json content matching SPT's TraderBase format
+        // Build base.json content
         var baseJson = new
         {
             _id = trader.Id,
@@ -178,7 +176,7 @@ public class TraderRegistrar(
                 .ToArray(),
         };
 
-        // Serialize to JSON and write to a temp file in the pack folder
+        // Serialize to temp file
         var jsonOptions = new JsonSerializerOptions
         {
             PropertyNamingPolicy = null,
@@ -189,17 +187,16 @@ public class TraderRegistrar(
         var baseFilePath = Path.Combine(packFolder, $".tradergen_base_{trader.Id}.json");
         File.WriteAllText(baseFilePath, jsonContent);
 
-        // Load it using SPT's ModHelper which deserializes via Newtonsoft with correct type mapping
+        // Load via SPT ModHelper
         var traderBase = modHelper.GetJsonDataFromFile<TraderBase>(packFolder, $".tradergen_base_{trader.Id}.json");
 
-        // Clean up the temp file
+        // Clean up temp file
         try { File.Delete(baseFilePath); } catch { /* ignore */ }
 
         return traderBase;
     }
 
-    // Register the trader's avatar image with the SPT image router.
-    // Looks for the avatar file relative to the trader pack folder.
+    // Register avatar image.
     private void RegisterAvatar(TraderDefinition trader, TraderBase traderBase, string packFolder)
     {
         var avatarRelPath = trader.Avatar.Replace('/', Path.DirectorySeparatorChar);
@@ -214,12 +211,12 @@ public class TraderRegistrar(
             return;
         }
 
-        // The route must match the avatar path in the base (without extension)
+        // Route must match avatar path
         var routePath = traderBase.Avatar.Replace(".jpg", "");
         imageRouter.AddRoute(routePath, avatarAbsPath);
     }
 
-    // Configure how often the trader's inventory refreshes.
+    // Configure inventory refresh time.
     private void SetTraderUpdateTime(TraderBase traderBase, int minSeconds, int maxSeconds)
     {
         var updateTime = new UpdateTime
@@ -230,7 +227,7 @@ public class TraderRegistrar(
         _traderConfig.UpdateTime.Add(updateTime);
     }
 
-    // Add the trader to the database with an empty assort (assort is filled later).
+    // Add trader to database with empty assort.
     private void AddTraderToDatabase(TraderBase traderBase)
     {
         var emptyAssort = new TraderAssort
@@ -262,7 +259,7 @@ public class TraderRegistrar(
         }
     }
 
-    // Add locale entries for all languages so the trader's name and description display correctly.
+    // Add locale entries for all languages.
     private void AddTraderLocales(TraderBase traderBase, TraderDefinition trader)
     {
         var locales = databaseService.GetTables().Locales.Global;
@@ -282,8 +279,7 @@ public class TraderRegistrar(
         }
     }
 
-    // Build the trader's assort (items for sale) and assign it to the database.
-    // Each assort item gets: an Item entry, a BarterScheme entry, and a LoyalLevelItems entry.
+    // Build trader's assort and assign to database.
     private void BuildAndAssignAssort(TraderDefinition trader)
     {
         var traderData = databaseService.GetTables().Traders.GetValueOrDefault(trader.Id);
@@ -297,10 +293,10 @@ public class TraderRegistrar(
         {
             try
             {
-                // Generate or use the specified item ID
+                // Generate or use specified item ID
                 var itemId = assortItem.ItemId ?? new MongoId().ToString();
 
-                // Create the root item (parentId = "hideout" marks it as a top-level assort item)
+                // Create root item
                 var item = new Item
                 {
                     Id = itemId,
@@ -314,7 +310,7 @@ public class TraderRegistrar(
                     },
                 };
 
-                // Apply buy restriction if specified
+                // Apply buy restriction
                 if (assortItem.BuyLimit > 0)
                 {
                     item.Upd.BuyRestrictionMax = assortItem.BuyLimit;
@@ -323,11 +319,11 @@ public class TraderRegistrar(
 
                 traderData.Assort.Items.Add(item);
 
-                // Build the barter scheme (what the player pays)
+                // Build barter scheme
                 var barterSchemeList = BuildBarterScheme(assortItem, trader.Currency);
                 traderData.Assort.BarterScheme[itemId] = barterSchemeList;
 
-                // Set the loyalty level requirement
+                // Set loyalty level
                 traderData.Assort.LoyalLevelItems[itemId] = assortItem.LoyaltyLevel;
             }
             catch (Exception ex)
@@ -340,15 +336,14 @@ public class TraderRegistrar(
         }
     }
 
-    // Build the barter scheme for a single assort item.
-    // If barter requirements are specified, use those. Otherwise, use money price.
+    // Build barter scheme for an assort item.
     private List<List<BarterScheme>> BuildBarterScheme(AssortItemDefinition assortItem, string defaultCurrency)
     {
         var schemeItems = new List<BarterScheme>();
 
         if (assortItem.Barter is { Count: > 0 })
         {
-            // Barter trade: each requirement is an ingredient
+            // Barter trade
             foreach (var barter in assortItem.Barter)
             {
                 schemeItems.Add(new BarterScheme
@@ -369,8 +364,7 @@ public class TraderRegistrar(
             });
         }
 
-        // SPT expects List<List<BarterScheme>> — outer list is OR options, inner list is AND requirements
-        // For simplicity, we only support a single option with all requirements AND'd together
+        // SPT expects List<List<BarterScheme>>
         return [schemeItems];
     }
 }

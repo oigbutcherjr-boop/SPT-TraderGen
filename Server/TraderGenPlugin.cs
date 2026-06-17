@@ -49,7 +49,7 @@ public class TraderGenPlugin(
         logger.LogWithColor("[TraderGen] TraderGen Framework v1.0.0 loading...", LogTextColor.Cyan);
         logger.LogWithColor("[TraderGen] ====================================", LogTextColor.Cyan);
 
-        // Discover and load all trader JSON files from the traders/ directory
+        // Load trader JSON files from traders/ directory
         var loadedTraders = traderLoader.LoadAllTraders();
 
         if (loadedTraders.Count == 0)
@@ -68,7 +68,7 @@ public class TraderGenPlugin(
 
         foreach (var loaded in loadedTraders)
         {
-            // Each trader is registered independently — one failure won't crash the others
+            // Register each trader independently
             var success = traderRegistrar.RegisterTrader(loaded);
             if (success)
             {
@@ -87,13 +87,13 @@ public class TraderGenPlugin(
         );
         logger.LogWithColor("[TraderGen] ====================================", LogTextColor.Cyan);
 
-        // ==================== Quest Loading Pipeline ====================
+        // Load and register quests
         await LoadAndRegisterQuests(loadedTraders);
     }
 
     private async Task LoadAndRegisterQuests(List<TraderLoader.LoadedTrader> loadedTraders)
     {
-        // Discover quest packs from trader pack folders
+        // Load quest packs from trader folders
         var questPacks = QuestLoader.LoadAllQuestPacks(loadedTraders, logger);
         if (questPacks.Count == 0)
             return;
@@ -103,7 +103,7 @@ public class TraderGenPlugin(
         var modPath = modHelper.GetAbsolutePathToModFolder(Assembly.GetExecutingAssembly());
         var questOutputDir = Path.Combine(modPath, "db", "CustomQuests");
 
-        // Clean previous generated BSG-format files (they are rebuilt every startup)
+        // Clean previous generated files (rebuilt every startup)
         if (Directory.Exists(questOutputDir))
             Directory.Delete(questOutputDir, true);
 
@@ -115,7 +115,7 @@ public class TraderGenPlugin(
         {
             var packName = Path.GetFileName(questPack.PackFolder);
 
-            // Validate
+            // Validate quest pack
             var errors = QuestValidator.Validate(questPack.Definition, questPack.TraderId, packName);
             if (errors.Count > 0)
             {
@@ -126,16 +126,16 @@ public class TraderGenPlugin(
                 continue;
             }
 
-            // Collect story quests only (rotating quests now use the repeatable system)
+            // Collect story quests
             var storyQuests = new List<Models.StoryQuestDefinition>(questPack.Definition.StoryQuests);
 
-            // Collect rotating quest templates for later processing via Harmony patch
+            // Collect rotating templates for later processing
             if (questPack.Definition.RotatingQuests.Count > 0)
             {
                 allRotatingTemplates.Add((questPack.Definition.RotatingQuests, questPack.TraderId, questPack.PackFolder));
             }
 
-            // Build BSG-format quest files for WTT lib (story quests only)
+            // Build BSG-format quest files
             if (storyQuests.Count > 0)
             {
                 var count = QuestBuilder.BuildQuestFiles(
@@ -150,7 +150,7 @@ public class TraderGenPlugin(
 
         if (totalStoryQuests > 0)
         {
-            // Use WTT library to register the generated story quests into the SPT database
+            // Register story quests into SPT database
             var assembly = Assembly.GetExecutingAssembly();
             await wttCommon.CustomQuestService.CreateCustomQuests(assembly);
 
@@ -159,7 +159,7 @@ public class TraderGenPlugin(
                 LogTextColor.Green);
         }
 
-        // Process rotating quests via the repeatable quest system (Harmony patch)
+        // Process rotating quests via repeatable quest system
         if (allRotatingTemplates.Count > 0)
         {
             SetupRepeatableQuests(allRotatingTemplates);
@@ -180,14 +180,14 @@ public class TraderGenPlugin(
         var totalTemplates = 0;
         foreach (var (templates, traderId, packFolder) in allTemplates)
         {
-            // Register image routes for any template icons
+            // Register image routes for template icons
             var imagePaths = RepeatableQuestGenerator.GetTemplateImagePaths(templates, packFolder);
             foreach (var (routePath, absFilePath) in imagePaths)
             {
                 imageRouter.AddRoute(routePath, absFilePath);
             }
 
-            // Register this trader's templates with the patch
+            // Register templates with the patch
             GetRepeatableQuestsPatch.RegisterTrader(new GetRepeatableQuestsPatch.TraderGenData
             {
                 TraderId = traderId,
@@ -204,15 +204,14 @@ public class TraderGenPlugin(
             return;
         }
 
-        // Pre-register locale entries for all possible quest IDs
-        // This ensures descriptions work when quests are generated on-demand
+        // Pre-register locale entries
         PreRegisterLocales(allTemplates);
 
-        // Enable the Harmony patch to inject quests into pmcData.RepeatableQuests
+        // Enable Harmony patch
         GetRepeatableQuestsPatch.SetDependencies(profileHelper, timeUtil);
         new GetRepeatableQuestsPatch().Enable();
 
-        // Register locale entries via the standard registrar as well
+        // Register locale entries via standard registrar
         RepeatableQuestLocaleRegistrar.RegisterLocales(databaseService, logger);
 
         logger.LogWithColor(
@@ -220,10 +219,7 @@ public class TraderGenPlugin(
             LogTextColor.Green);
     }
 
-    /// <summary>
-    /// Pre-registers locale entries for all possible quest IDs at startup.
-    /// This ensures quest descriptions are available when quests are generated on-demand.
-    /// </summary>
+    // Pre-registers locale entries at startup so quest descriptions work when generated.
     private void PreRegisterLocales(List<(List<Models.RotatingQuestTemplate> Templates, string TraderId, string PackFolder)> allTemplates)
     {
         logger.LogWithColor("[TraderGen] Pre-registering locale entries for repeatable quests...", LogTextColor.Cyan);
@@ -235,7 +231,7 @@ public class TraderGenPlugin(
         {
             foreach (var template in templates)
             {
-                // Generate locale entries for each quest slot
+                // Generate locale entries per quest slot
                 for (var i = 0; i < template.QuestCount; i++)
                 {
                     var questId = RepeatableQuestGenerator.DeriveQuestId(template.Id, i);
@@ -248,7 +244,7 @@ public class TraderGenPlugin(
                         ? template.DescriptionPool[rng.Next(template.DescriptionPool.Count)]
                         : "Complete the assigned task.";
                     
-                    // Pick a location to replace {location} placeholder
+                    // Pick location for {location} placeholder
                     string? pickedLocation = null;
                     foreach (var obj in template.Objectives)
                     {
@@ -259,21 +255,21 @@ public class TraderGenPlugin(
                         }
                     }
                     
-                    // Replace {location} placeholder
+                    // Replace placeholder
                     var locationDisplay = !string.IsNullOrWhiteSpace(pickedLocation) && pickedLocation != "any"
                         ? Services.LocationHelper.ToDisplayName(pickedLocation)
                         : "Tarkov";
                     name = name.Replace("{location}", locationDisplay);
                     description = description.Replace("{location}", locationDisplay);
                     
-                    // Store in locale store for later use
+                    // Store in locale store
                     RepeatableQuestLocaleStore.Add(questId.ToString(), name, description);
                     totalEntries++;
                 }
             }
         }
 
-        // Register all accumulated locales with SPT's database
+        // Register locales with SPT database
         var locales = RepeatableQuestLocaleStore.GetAll();
         var conditionLocales = RepeatableQuestLocaleStore.GetAllConditions();
 

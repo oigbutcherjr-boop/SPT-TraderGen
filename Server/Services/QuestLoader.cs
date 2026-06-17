@@ -3,7 +3,7 @@ using SPTarkov.Server.Core.Models.Logging;
 using SPTarkov.Server.Core.Models.Utils;
 using TraderGen.Models;
 
-// Discovers and loads quest pack JSON files (quests.json) from trader pack folders.
+// Discovers and loads quest pack JSON files from trader pack folders.
 namespace TraderGen.Services;
 
 public static class QuestLoader
@@ -15,7 +15,7 @@ public static class QuestLoader
         AllowTrailingCommas = true,
     };
 
-    // Holds a loaded quest pack along with its source information.
+    // Loaded quest pack with source information.
     public record LoadedQuestPack(
         QuestPackDefinition Definition,
         string SourceFile,
@@ -23,8 +23,7 @@ public static class QuestLoader
         string TraderId
     );
 
-    // Load quest packs from all trader pack folders.
-    // Looks for quests.json in each pack folder.
+    // Load quest packs from trader folders.
     public static List<LoadedQuestPack> LoadAllQuestPacks(
         IEnumerable<TraderLoader.LoadedTrader> loadedTraders,
         ISptLogger<TraderGenPlugin> logger)

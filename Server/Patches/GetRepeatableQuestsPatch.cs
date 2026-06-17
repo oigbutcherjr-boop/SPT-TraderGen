@@ -14,17 +14,8 @@ using SPTarkov.Server.Core.Utils;
 
 namespace TraderGen.Patches;
 
-/// <summary>
-/// Patches SPT's GetClientRepeatableQuests to properly integrate TraderGen quests.
-/// 
-/// The key insight: TraderGen quests must be persisted to pmcData.RepeatableQuests
-/// so that SPT's quest lifecycle (accept, complete, expire) works correctly.
-/// 
-/// This patch:
-/// 1. Generates TraderGen quests on-demand (deterministically)
-/// 2. Persists them to pmcData.RepeatableQuests under a "TraderGen" group
-/// 3. SPT then naturally includes them in the response and manages their lifecycle
-/// </summary>
+// Patches SPT's GetClientRepeatableQuests to integrate TraderGen quests.
+// Quests are persisted to pmcData.RepeatableQuests for proper lifecycle management.
 public class GetRepeatableQuestsPatch : AbstractPatch
 {
     // Dependencies set by TraderGenPlugin before enabling
@@ -34,9 +25,7 @@ public class GetRepeatableQuestsPatch : AbstractPatch
     // Trader data registered by TraderGenPlugin
     private static List<TraderGenData> _registeredTraders = new();
 
-    /// <summary>
-    /// Data about a loaded trader and their rotating quest templates
-    /// </summary>
+    // Trader data with rotating quest templates
     public class TraderGenData
     {
         public string TraderId { get; set; } = string.Empty;
@@ -60,10 +49,7 @@ public class GetRepeatableQuestsPatch : AbstractPatch
         return AccessTools.Method(typeof(RepeatableQuestController), nameof(RepeatableQuestController.GetClientRepeatableQuests));
     }
 
-    /// <summary>
-    /// Harmony postfix - generates and persists TraderGen quests.
-    /// This runs after SPT's quest generation, allowing us to add our quests.
-    /// </summary>
+    // Harmony postfix - generates and persists TraderGen quests
     [PatchPostfix]
     public static void Postfix(MongoId sessionID, ref List<PmcDataRepeatableQuest> __result)
     {
@@ -83,7 +69,7 @@ public class GetRepeatableQuestsPatch : AbstractPatch
 
         try
         {
-            // Get the player's profile
+            // Get player profile
             var fullProfile = _profileHelper.GetFullProfile(sessionID);
             if (fullProfile?.CharacterData?.PmcData == null)
             {
@@ -96,15 +82,15 @@ public class GetRepeatableQuestsPatch : AbstractPatch
             
             Console.WriteLine($"[TraderGen] Processing {pmcData.RepeatableQuests?.Count ?? 0} existing repeatable quest groups");
 
-            // Get or create our TraderGen repeatable quest group
+            // Get or create TraderGen quest group
             var traderGenGroup = GetOrCreateTraderGenGroup(pmcData, currentTime);
 
-            // Generate and add quests for each registered trader
+            // Generate quests for each registered trader
             foreach (var traderData in _registeredTraders)
             {
                 Console.WriteLine($"[TraderGen] Processing trader {traderData.TraderId} with {traderData.Templates.Count} templates");
                 
-                // Check if trader is unlocked for this player
+                // Check if trader is unlocked
                 if (!IsTraderUnlocked(pmcData, traderData.TraderId))
                 {
                     Console.WriteLine($"[TraderGen] Trader {traderData.TraderId} is not unlocked, skipping");
@@ -112,12 +98,12 @@ public class GetRepeatableQuestsPatch : AbstractPatch
                 }
                 Console.WriteLine($"[TraderGen] Trader {traderData.TraderId} is unlocked, generating quests");
 
-                // Generate quests for this trader with player ID
+                // Generate quests for this trader
                 var playerId = pmcData.Id?.ToString() ?? sessionID.ToString();
                 var quests = GenerateQuestsForTrader(traderData, sessionID, currentTime, playerId);
                 Console.WriteLine($"[TraderGen] Generated {quests.Count} quests for {traderData.TraderId} with playerId: {playerId}");
 
-                // Add new quests, skip existing ones (preserves progress)
+                // Add new quests, skip existing ones
                 foreach (var quest in quests)
                 {
                     var existingIndex = traderGenGroup.ActiveQuests?.FindIndex(q => q.Id == quest.Id) ?? -1;
@@ -130,14 +116,14 @@ public class GetRepeatableQuestsPatch : AbstractPatch
                         traderGenGroup.ChangeRequirement ??= new Dictionary<MongoId, ChangeRequirement>();
                         traderGenGroup.ChangeRequirement[quest.Id] = CreateChangeRequirement(quest);
                     }
-                    // If quest exists, keep it as-is (preserves player progress)
+                    // Keep existing quests to preserve progress
                 }
 
-                // Clean up truly stale quests (only those not in current generation AND not accepted/completed)
+                // Clean up stale quests
                 CleanupStaleQuests(traderGenGroup, traderData.TraderId, quests, pmcData);
             }
 
-            // Ensure our group is in the result
+            // Ensure TraderGen group is in result
             if (!__result.Any(r => r.Name == "TraderGen"))
             {
                 __result.Add(traderGenGroup);
@@ -145,7 +131,7 @@ public class GetRepeatableQuestsPatch : AbstractPatch
             }
             else
             {
-                // Update existing entry
+                // Update existing group
                 var existingIndex = __result.FindIndex(r => r.Name == "TraderGen");
                 if (existingIndex >= 0)
                 {
@@ -156,13 +142,12 @@ public class GetRepeatableQuestsPatch : AbstractPatch
             
             Console.WriteLine($"[TraderGen] Patch complete - result now has {__result.Count} quest groups");
             
-            // Register any new locale entries that were added during quest generation
-            // This ensures quest names and descriptions display correctly
+            // Register locale entries for new quests
             RepeatableQuestLocaleRegistrar.RegisterNewLocales();
         }
         catch (Exception ex)
         {
-            // Log error but don't break SPT's quest system
+            // Log error but don't break SPT
             Console.WriteLine($"[TraderGen] Error in repeatable quest patch: {ex.Message}");
             Console.WriteLine($"[TraderGen] Stack trace: {ex.StackTrace}");
         }
@@ -175,18 +160,17 @@ public class GetRepeatableQuestsPatch : AbstractPatch
         var existing = pmcData.RepeatableQuests?.FirstOrDefault(r => r.Name == groupName);
         if (existing != null)
         {
-            // Update EndTime if it's expired
+            // Update expired EndTime
             if (existing.EndTime < currentTime)
             {
-                // Set to ~24 hours from now (daily rotation default)
+                // Set to 24 hours from now
                 existing.EndTime = currentTime + 86400;
                 Console.WriteLine($"[TraderGen] Updated expired EndTime to {existing.EndTime}");
             }
             return existing;
         }
 
-        // Create new group with a fixed ID (valid 24-char hex)
-        // EndTime set to ~24 hours from now (daily rotation)
+        // Create new group with fixed ID, EndTime 24 hours from now
         var endTime = currentTime + 86400;
         Console.WriteLine($"[TraderGen] Creating new TraderGen group with EndTime: {endTime}");
         
@@ -261,21 +245,21 @@ public class GetRepeatableQuestsPatch : AbstractPatch
 
         foreach (var staleQuest in staleQuests)
         {
-            // Check if quest has been accepted or completed
+            // Check quest status
             var questStatus = pmcData.Quests?.FirstOrDefault(q => q.QId == staleQuest.Id);
             
-            // Only remove if not in progress (not Started or AvailableForFinish)
+            // Only remove if not in progress
             if (questStatus == null || 
                 questStatus.Status is QuestStatusEnum.AvailableForStart or QuestStatusEnum.Locked)
             {
                 group.ActiveQuests.RemoveAll(q => q.Id == staleQuest.Id);
                 group.ChangeRequirement?.Remove(staleQuest.Id);
                 
-                // Add to inactive
+                // Add to inactive list
                 group.InactiveQuests ??= new List<RepeatableQuest>();
                 group.InactiveQuests.Add(staleQuest);
             }
-            // If quest is Started or AvailableForFinish, keep it in ActiveQuests
+            // Keep in-progress quests in ActiveQuests
         }
     }
 

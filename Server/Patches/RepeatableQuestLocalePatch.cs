@@ -5,8 +5,7 @@ using TraderGen.Services;
 
 namespace TraderGen.Patches;
 
-// Registers locale entries for TraderGen repeatable quests into SPT's locale database.
-// Called during mod initialization after quests are generated.
+// Registers locale entries for repeatable quests into SPT's locale database.
 public static class RepeatableQuestLocaleRegistrar
 {
     private static DatabaseService? _databaseService;
@@ -30,7 +29,7 @@ public static class RepeatableQuestLocaleRegistrar
             {
                 foreach (var (questId, (name, description)) in locales)
                 {
-                    // SPT repeatable quest locale keys follow this pattern:
+                    // SPT locale key pattern
                     dict.TryAdd($"{questId} name", name);
                     dict.TryAdd($"{questId} description", description);
                     dict.TryAdd($"{questId} note", "");
@@ -58,11 +57,7 @@ public static class RepeatableQuestLocaleRegistrar
             LogTextColor.Green);
     }
 
-    /// <summary>
-    /// Registers new locales that were added after initial registration.
-    /// Called from the patch after quest generation.
-    /// Uses reflection to directly access and modify the underlying dictionary.
-    /// </summary>
+    // Registers new locales after initial registration.
     public static void RegisterNewLocales()
     {
         if (_databaseService == null)
@@ -159,24 +154,22 @@ public static class RepeatableQuestLocaleRegistrar
         }
     }
 
-    /// <summary>
-    /// Uses reflection to get the underlying dictionary from a LazyDictionary
-    /// </summary>
+    // Uses reflection to get the underlying dictionary from a LazyDictionary
     private static Dictionary<string, string>? GetDictionaryFromLazy(object lazyDict)
     {
         try
         {
-            // Try to access the 'Value' or underlying dictionary through reflection
+            // Try to access underlying dictionary
             var type = lazyDict.GetType();
             
-            // Try 'Value' property first (standard Lazy pattern)
+            // Try Value property
             var valueProperty = type.GetProperty("Value");
             if (valueProperty != null)
             {
                 return valueProperty.GetValue(lazyDict) as Dictionary<string, string>;
             }
 
-            // Try to find a dictionary field
+            // Try to find dictionary field
             var fields = type.GetFields(System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
             foreach (var field in fields)
             {
@@ -186,7 +179,7 @@ public static class RepeatableQuestLocaleRegistrar
                 }
             }
 
-            // Try to invoke a GetValue method
+            // Try GetValue method
             var getValueMethod = type.GetMethod("GetValue");
             if (getValueMethod != null && getValueMethod.GetParameters().Length == 0)
             {

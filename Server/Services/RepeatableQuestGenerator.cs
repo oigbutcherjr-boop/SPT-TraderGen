@@ -10,14 +10,12 @@ using TraderGen.Models;
 
 namespace TraderGen.Services;
 
-// Generates proper SPT RepeatableQuest objects from our RotatingQuestTemplate definitions.
-// These are injected into the daily/weekly quest pools via the Harmony patch.
+// Generates SPT RepeatableQuest objects from RotatingQuestTemplate definitions.
 public static class RepeatableQuestGenerator
 {
     private static readonly Random Rng = new();
 
-    // Derives a stable 24-char hex MongoId from a template ID + slot index.
-    // The same templateId+index always produces the same quest ID across restarts.
+    // Derives a stable MongoId from template ID + slot index.
     public static MongoId DeriveQuestId(string templateId, int index)
     {
         var input = Encoding.UTF8.GetBytes($"{templateId}:{index}");
@@ -26,8 +24,7 @@ public static class RepeatableQuestGenerator
         return new MongoId(Convert.ToHexString(hash)[..24].ToLowerInvariant());
     }
 
-    // Returns a seeded RNG derived from the template ID + index so all random choices
-    // (name, description, objective counts, locations) are identical every server restart.
+    // Returns a seeded RNG for deterministic random choices.
     private static Random SeededRng(string templateId, int index)
     {
         var input = Encoding.UTF8.GetBytes($"{templateId}:{index}");
@@ -36,8 +33,7 @@ public static class RepeatableQuestGenerator
         return new Random(seed);
     }
 
-    // Generate RepeatableQuest objects from rotating quest templates for a specific trader.
-    // Returns quests grouped by rotation type ("Daily" or "Weekly").
+    // Generate RepeatableQuest objects from rotating templates.
     public static Dictionary<string, List<RepeatableQuest>> GenerateRepeatableQuests(
         List<RotatingQuestTemplate> templates,
         string traderId,
@@ -70,7 +66,7 @@ public static class RepeatableQuestGenerator
         return result;
     }
 
-    // Generate change requirements for the generated quests (cost to replace them).
+    // Generate change requirements (cost to replace quests).
     public static Dictionary<string, Dictionary<MongoId, ChangeRequirement>> GenerateChangeRequirements(
         Dictionary<string, List<RepeatableQuest>> questsByGroup)
     {
@@ -93,10 +89,7 @@ public static class RepeatableQuestGenerator
         return result;
     }
 
-    /// <summary>
-    /// Generates a single quest for the new patch system.
-    /// Does not require logger since it's called from patch context.
-    /// </summary>
+    // Generates a single quest for the patch system.
     public static RepeatableQuest? GenerateQuestForPatch(
         RotatingQuestTemplate template,
         string traderId,
@@ -106,7 +99,7 @@ public static class RepeatableQuestGenerator
     {
         Console.WriteLine($"[TraderGen] GenerateQuestForPatch called - template: {template.Id}, trader: {traderId}, slot: {slotIndex}");
         
-        // Reuse the same generation logic but without external logger
+        // Use same generation logic without external logger
         var quest = GenerateQuestInternal(template, traderId, packFolder, null, slotIndex, playerId);
         
         if (quest != null)
@@ -214,7 +207,7 @@ public static class RepeatableQuestGenerator
         return quest;
     }
 
-    // Keep old method for backward compatibility during transition
+    // Keep old method for backward compatibility
     private static RepeatableQuest? GenerateQuest(
         RotatingQuestTemplate template,
         string traderId,
@@ -348,7 +341,7 @@ public static class RepeatableQuestGenerator
             }
         }
 
-        // AvailableForStart: level >= 1
+        // Level requirement
         var availableForStart = new List<QuestCondition>
         {
             new()
@@ -380,10 +373,7 @@ public static class RepeatableQuestGenerator
             ? objTemplate.TargetPool[rng.Next(objTemplate.TargetPool.Count)]
             : "Savage";
 
-        // Determine correct Target (TargetSide) and SavageRole.
-        // PMCs (USEC/BEAR) use Target="AnyPmc". Everything else is Savage-side.
-        // Specific Savage-side types (Rogues, Raiders, bosses) go in SavageRole.
-        // Generic "Savage" and "Any" have no SavageRole.
+        // Determine target and savageRole
         var isAnyPmc = target == "AnyPmc";
         var isGenericSavage = target == "Savage" || target == "Any";
         var killTarget = isAnyPmc ? "AnyPmc" : "Savage";
@@ -401,7 +391,7 @@ public static class RepeatableQuestGenerator
 
         var counterConditions = new List<QuestConditionCounterCondition> { killCondition };
 
-        // Add location condition if specific
+        // Add location condition
         if (!string.IsNullOrWhiteSpace(location) && location != "any")
         {
             counterConditions.Add(new QuestConditionCounterCondition
@@ -584,10 +574,7 @@ public static class RepeatableQuestGenerator
 
     private static readonly string DefaultRepeatableQuestIcon = "/files/quest/icon/616d993bc8c5ad2ab30ff6ba.jpg";
 
-    // Resolves the quest image route path for a template.
-    // If the template specifies an image and the file exists in the pack folder,
-    // returns a route like "/files/quest/icon/tpl_{templateId}".
-    // Otherwise falls back to the default repeatable quest icon.
+    // Resolves quest image route path for a template.
     private static string ResolveQuestImageRoute(RotatingQuestTemplate template, string packFolder)
     {
         if (!string.IsNullOrWhiteSpace(template.Image))
@@ -602,8 +589,7 @@ public static class RepeatableQuestGenerator
         return DefaultRepeatableQuestIcon;
     }
 
-    // Collects all template image paths that need to be registered with ImageRouter.
-    // Returns a list of (routePath, absoluteFilePath) tuples.
+    // Collects template image paths for ImageRouter registration.
     public static List<(string RoutePath, string AbsoluteFilePath)> GetTemplateImagePaths(
         List<RotatingQuestTemplate> templates,
         string packFolder)
