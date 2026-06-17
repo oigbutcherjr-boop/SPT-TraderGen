@@ -7,6 +7,8 @@ using SPTarkov.Server.Core.Models.Spt.Mod;
 using SPTarkov.Server.Core.Models.Utils;
 using SPTarkov.Server.Core.Routers;
 using SPTarkov.Server.Core.Services;
+using SPTarkov.Server.Core.Utils;
+using TraderGen.Generators;
 using TraderGen.Patches;
 using TraderGen.Services;
 using TraderGen.Validation;
@@ -36,7 +38,9 @@ public class TraderGenPlugin(
     TraderRegistrar traderRegistrar,
     DatabaseService databaseService,
     ImageRouter imageRouter,
-    WTTServerCommonLib.WTTServerCommonLib wttCommon
+    WTTServerCommonLib.WTTServerCommonLib wttCommon,
+    ProfileHelper profileHelper,
+    TimeUtil timeUtil
 ) : IOnLoad
 {
     public async Task OnLoad()
@@ -173,13 +177,7 @@ public class TraderGenPlugin(
     {
         logger.LogWithColor("[TraderGen] Setting up repeatable quests via Harmony patch...", LogTextColor.Cyan);
 
-        // Aggregate all generated repeatable quests across all trader packs
-        var allQuestsByGroup = new Dictionary<string, List<SPTarkov.Server.Core.Models.Eft.Common.Tables.RepeatableQuest>>
-        {
-            ["Daily"] = new(),
-            ["Weekly"] = new(),
-        };
-
+        var totalTemplates = 0;
         foreach (var (templates, traderId, packFolder) in allTemplates)
         {
             // Register image routes for any template icons
@@ -189,35 +187,125 @@ public class TraderGenPlugin(
                 imageRouter.AddRoute(routePath, absFilePath);
             }
 
-            var questsByGroup = RepeatableQuestGenerator.GenerateRepeatableQuests(templates, traderId, packFolder, logger);
-
-            foreach (var (group, quests) in questsByGroup)
+            // Register this trader's templates with the patch
+            GetRepeatableQuestsPatch.RegisterTrader(new GetRepeatableQuestsPatch.TraderGenData
             {
-                allQuestsByGroup[group].AddRange(quests);
-            }
+                TraderId = traderId,
+                Templates = templates,
+                PackFolder = packFolder,
+            });
+
+            totalTemplates += templates.Count;
         }
 
-        var totalRepeatable = allQuestsByGroup.Values.Sum(g => g.Count);
-        if (totalRepeatable == 0)
+        if (totalTemplates == 0)
         {
-            logger.LogWithColor("[TraderGen] No repeatable quests generated.", LogTextColor.Yellow);
+            logger.LogWithColor("[TraderGen] No repeatable quest templates found.", LogTextColor.Yellow);
             return;
         }
 
-        // Generate change requirements
-        var changeRequirements = RepeatableQuestGenerator.GenerateChangeRequirements(allQuestsByGroup);
+        // Pre-register locale entries for all possible quest IDs
+        // This ensures descriptions work when quests are generated on-demand
+        PreRegisterLocales(allTemplates);
 
-        // Pass quest data to the Harmony patch
-        GetRepeatableQuestsPatch.SetQuestsToInject(allQuestsByGroup, changeRequirements);
-
-        // Enable the Harmony patch
+        // Enable the Harmony patch to inject quests into pmcData.RepeatableQuests
+        GetRepeatableQuestsPatch.SetDependencies(profileHelper, timeUtil);
         new GetRepeatableQuestsPatch().Enable();
 
-        // Register locale entries for the repeatable quests
+        // Register locale entries via the standard registrar as well
         RepeatableQuestLocaleRegistrar.RegisterLocales(databaseService, logger);
 
         logger.LogWithColor(
-            $"[TraderGen] Registered {totalRepeatable} repeatable quest(s) (Daily: {allQuestsByGroup["Daily"].Count}, Weekly: {allQuestsByGroup["Weekly"].Count}).",
+            $"[TraderGen] Registered {totalTemplates} quest template(s) from {allTemplates.Count} trader(s). Quests will be generated on-demand via patch.",
+            LogTextColor.Green);
+    }
+
+    /// <summary>
+    /// Pre-registers locale entries for all possible quest IDs at startup.
+    /// This ensures quest descriptions are available when quests are generated on-demand.
+    /// </summary>
+    private void PreRegisterLocales(List<(List<Models.RotatingQuestTemplate> Templates, string TraderId, string PackFolder)> allTemplates)
+    {
+        logger.LogWithColor("[TraderGen] Pre-registering locale entries for repeatable quests...", LogTextColor.Cyan);
+
+        var totalEntries = 0;
+        var localeTable = databaseService.GetLocales().Global;
+
+        foreach (var (templates, traderId, packFolder) in allTemplates)
+        {
+            foreach (var template in templates)
+            {
+                // Generate locale entries for each quest slot
+                for (var i = 0; i < template.QuestCount; i++)
+                {
+                    var questId = RepeatableQuestGenerator.DeriveQuestId(template.Id, i);
+                    
+                    // Use the same seeded RNG as quest generation for consistency
+                    // This ensures the pre-registered locale matches the actual quest
+                    var rng = new Random((template.Id + ":" + i).GetHashCode());
+                    var name = template.NamePool[rng.Next(template.NamePool.Count)];
+                    var description = template.DescriptionPool.Count > 0
+                        ? template.DescriptionPool[rng.Next(template.DescriptionPool.Count)]
+                        : "Complete the assigned task.";
+                    
+                    // Pick a location to replace {location} placeholder
+                    string? pickedLocation = null;
+                    foreach (var obj in template.Objectives)
+                    {
+                        if (obj.LocationPool.Count > 0)
+                        {
+                            pickedLocation = obj.LocationPool[rng.Next(obj.LocationPool.Count)];
+                            break;
+                        }
+                    }
+                    
+                    // Replace {location} placeholder
+                    var locationDisplay = !string.IsNullOrWhiteSpace(pickedLocation) && pickedLocation != "any"
+                        ? Services.LocationHelper.ToDisplayName(pickedLocation)
+                        : "Tarkov";
+                    name = name.Replace("{location}", locationDisplay);
+                    description = description.Replace("{location}", locationDisplay);
+                    
+                    // Store in locale store for later use
+                    RepeatableQuestLocaleStore.Add(questId.ToString(), name, description);
+                    totalEntries++;
+                }
+            }
+        }
+
+        // Register all accumulated locales with SPT's database
+        var locales = RepeatableQuestLocaleStore.GetAll();
+        var conditionLocales = RepeatableQuestLocaleStore.GetAllConditions();
+
+        foreach (var (locale, lazyDict) in localeTable)
+        {
+            lazyDict.AddTransformer(dict =>
+            {
+                foreach (var (questId, (name, description)) in locales)
+                {
+                    dict.TryAdd($"{questId} name", name);
+                    dict.TryAdd($"{questId} description", description);
+                    dict.TryAdd($"{questId} note", "");
+                    dict.TryAdd($"{questId} successMessageText", "Quest complete. Well done.");
+                    dict.TryAdd($"{questId} failMessageText", "Quest failed.");
+                    dict.TryAdd($"{questId} startedMessageText", "Quest accepted.");
+                    dict.TryAdd($"{questId} changeQuestMessageText", "Quest replaced.");
+                    dict.TryAdd($"{questId} acceptPlayerMessage", "");
+                    dict.TryAdd($"{questId} declinePlayerMessage", "");
+                    dict.TryAdd($"{questId} completePlayerMessage", "");
+                }
+
+                foreach (var (conditionId, text) in conditionLocales)
+                {
+                    dict.TryAdd(conditionId, text);
+                }
+
+                return dict;
+            });
+        }
+
+        logger.LogWithColor(
+            $"[TraderGen] Pre-registered {totalEntries} locale entries across {locales.Count} quests.",
             LogTextColor.Green);
     }
 }

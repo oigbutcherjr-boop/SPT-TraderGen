@@ -39,7 +39,7 @@ public static class LocationHelper
         ["Lighthouse"] = "5704e4dad2720bb55b8b4567",
         ["laboratory"] = "5b0fc42d86f7744a585f9105",
         ["RezervBase"] = "5704e5fad2720bc05b8b4567",
-        ["Reserve"] = "5704e5fad2720bc05b8b4567",
+        ["Reserve"] = "5704e5fad2720bc05b8b4567", // alias
         ["TarkovStreets"] = "5714dc692459777137212e12",
         ["Sandbox"] = "653e6760052c01c1c805532f",
         ["sandbox_high"] = "653e6760052c01c1c805532f",

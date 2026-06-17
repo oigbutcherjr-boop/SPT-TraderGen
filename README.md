@@ -316,7 +316,7 @@ The TraderGen Tool export zip is already structured for distribution — users j
 
 When publishing:
 
-1. **State the dependency**: Your mod requires `com.serenity.tradergen` v1.0.0+
+1. **State the dependencies**: Your mod requires `com.serenity.tradergen` v1.0.0+ and `com.wtt.commonlib` (WTT CommonLib)
 2. **Do not include** the TraderGen DLL or other authors' packs in your zip
 3. **Include your assets**: Ensure `assets/avatar.jpg` and any quest icons are present
 4. **Test** by extracting and running the server before publishing
@@ -366,6 +366,7 @@ If a pack has errors it is **skipped** — other packs still load normally.
 - **DI Pattern**: `[Injectable]` + `IOnLoad` (runs at `PostDBModLoader + 1`)
 - **NuGet Packages**: `SPTarkov.Common`, `SPTarkov.DI`, `SPTarkov.Server.Core` (4.0.13)
 - **Quest integration**: Story quests via WTT CustomQuests library; rotating quests injected directly into the SPT repeatable quest pool
+- **Runtime dependency**: `com.wtt.commonlib` (WTT CommonLib) — required for quest registration
 
 ## License
 

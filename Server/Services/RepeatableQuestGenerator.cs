@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text;
 using SPTarkov.Server.Core.Models.Common;
 using SPTarkov.Server.Core.Models.Eft.Common.Tables;
 using SPTarkov.Server.Core.Models.Enums;
@@ -13,6 +15,26 @@ namespace TraderGen.Services;
 public static class RepeatableQuestGenerator
 {
     private static readonly Random Rng = new();
+
+    // Derives a stable 24-char hex MongoId from a template ID + slot index.
+    // The same templateId+index always produces the same quest ID across restarts.
+    public static MongoId DeriveQuestId(string templateId, int index)
+    {
+        var input = Encoding.UTF8.GetBytes($"{templateId}:{index}");
+        var hash = MD5.HashData(input);
+        // MD5 = 16 bytes = 32 hex chars; take first 24
+        return new MongoId(Convert.ToHexString(hash)[..24].ToLowerInvariant());
+    }
+
+    // Returns a seeded RNG derived from the template ID + index so all random choices
+    // (name, description, objective counts, locations) are identical every server restart.
+    private static Random SeededRng(string templateId, int index)
+    {
+        var input = Encoding.UTF8.GetBytes($"{templateId}:{index}");
+        var hash = MD5.HashData(input);
+        var seed = BitConverter.ToInt32(hash, 0);
+        return new Random(seed);
+    }
 
     // Generate RepeatableQuest objects from rotating quest templates for a specific trader.
     // Returns quests grouped by rotation type ("Daily" or "Weekly").
@@ -39,7 +61,7 @@ public static class RepeatableQuestGenerator
 
             for (var i = 0; i < template.QuestCount; i++)
             {
-                var quest = GenerateQuest(template, traderId, packFolder, logger);
+                var quest = GenerateQuest(template, traderId, packFolder, logger, i);
                 if (quest != null)
                     result[groupName].Add(quest);
             }
@@ -71,22 +93,57 @@ public static class RepeatableQuestGenerator
         return result;
     }
 
-    private static RepeatableQuest? GenerateQuest(
+    /// <summary>
+    /// Generates a single quest for the new patch system.
+    /// Does not require logger since it's called from patch context.
+    /// </summary>
+    public static RepeatableQuest? GenerateQuestForPatch(
         RotatingQuestTemplate template,
         string traderId,
         string packFolder,
-        ISptLogger<TraderGenPlugin> logger)
+        int slotIndex = 0,
+        string? playerId = null)
     {
-        var questId = new MongoId();
+        Console.WriteLine($"[TraderGen] GenerateQuestForPatch called - template: {template.Id}, trader: {traderId}, slot: {slotIndex}");
+        
+        // Reuse the same generation logic but without external logger
+        var quest = GenerateQuestInternal(template, traderId, packFolder, null, slotIndex, playerId);
+        
+        if (quest != null)
+        {
+            Console.WriteLine($"[TraderGen] Generated quest {quest.Id} for {traderId}");
+        }
+        else
+        {
+            Console.WriteLine($"[TraderGen] Failed to generate quest for template {template.Id}");
+        }
+        
+        return quest;
+    }
+
+    private static RepeatableQuest? GenerateQuestInternal(
+        RotatingQuestTemplate template,
+        string traderId,
+        string packFolder,
+        ISptLogger<TraderGenPlugin>? logger,
+        int slotIndex = 0,
+        string? playerId = null)
+    {
+        // Stable ID — same templateId+slotIndex always produces the same quest ID.
+        // This ensures in-progress quests survive server restarts.
+        var questId = DeriveQuestId(template.Id, slotIndex);
+
+        // Seeded RNG — all random choices are deterministic per template+slot.
+        var rng = SeededRng(template.Id, slotIndex);
 
         // Pick random name and description
-        var name = template.NamePool[Rng.Next(template.NamePool.Count)];
+        var name = template.NamePool[rng.Next(template.NamePool.Count)];
         var description = template.DescriptionPool.Count > 0
-            ? template.DescriptionPool[Rng.Next(template.DescriptionPool.Count)]
+            ? template.DescriptionPool[rng.Next(template.DescriptionPool.Count)]
             : $"Complete the assigned {template.Rotation} task.";
 
         // Build objectives and determine quest type + location
-        var (conditions, questType, location) = BuildConditions(template, traderId);
+        var (conditions, questType, location) = BuildConditions(template, traderId, rng);
 
         // Apply {location} placeholder
         var locationDisplay = !string.IsNullOrWhiteSpace(location)
@@ -96,7 +153,100 @@ public static class RepeatableQuestGenerator
         description = description.Replace("{location}", locationDisplay);
 
         // Calculate rewards
-        var totalCount = template.Objectives.Sum(o => Rng.Next(o.CountRange.Min, o.CountRange.Max + 1));
+        var totalCount = template.Objectives.Sum(o => rng.Next(o.CountRange.Min, o.CountRange.Max + 1));
+        var scaling = template.RewardScaling;
+        var rewards = BuildRewards(traderId, totalCount, scaling);
+
+        // Build the change cost (currency to replace the quest)
+        var changeCost = new List<ChangeCost>
+        {
+            new()
+            {
+                TemplateId = CurrencyHelper.ToTemplateId(scaling.Currency),
+                Count = Math.Max(1000, scaling.BaseMoney / 2),
+            }
+        };
+
+        var quest = new RepeatableQuest
+        {
+            Id = questId,
+            TraderId = traderId,
+            Location = GetQuestLocation(location),
+            Image = ResolveQuestImageRoute(template, packFolder),
+            Type = questType,
+            IsKey = false,
+            Restartable = false,
+            InstantComplete = false,
+            SecretQuest = false,
+            CanShowNotificationsInGame = true,
+            Name = questId.ToString() + " name",
+            Note = questId.ToString() + " note",
+            Description = questId.ToString() + " description",
+            SuccessMessageText = questId.ToString() + " successMessageText",
+            FailMessageText = questId.ToString() + " failMessageText",
+            StartedMessageText = questId.ToString() + " startedMessageText",
+            ChangeQuestMessageText = questId.ToString() + " changeQuestMessageText",
+            AcceptPlayerMessage = questId.ToString() + " acceptPlayerMessage",
+            DeclinePlayerMessage = questId.ToString() + " declinePlayerMessage",
+            CompletePlayerMessage = questId.ToString() + " completePlayerMessage",
+            AcceptanceAndFinishingSource = null,
+            Side = "Pmc",
+            Conditions = conditions,
+            Rewards = rewards,
+            ChangeCost = changeCost,
+            ChangeStandingCost = 0,
+            TemplateId = GetTemplateIdForType(questType),
+            Status = 0, // Locked - SPT transitions to AvailableForStart when returning to client
+            QuestStatus = new RepeatableQuestStatus
+            {
+                Id = questId,
+                QId = questId,
+                Uid = playerId ?? "0", // Use actual player ID from session
+                StartTime = 0, // 0 = not started yet
+                Status = 1, // AvailableForStart (1) - not Started (2)
+                StatusTimers = "",
+            },
+        };
+
+        // Store locale data for the quest
+        RepeatableQuestLocaleStore.Add(questId.ToString(), name, description);
+
+        return quest;
+    }
+
+    // Keep old method for backward compatibility during transition
+    private static RepeatableQuest? GenerateQuest(
+        RotatingQuestTemplate template,
+        string traderId,
+        string packFolder,
+        ISptLogger<TraderGenPlugin> logger,
+        int slotIndex = 0)
+    {
+        // Stable ID — same templateId+slotIndex always produces the same quest ID.
+        // This ensures in-progress quests survive server restarts.
+        var questId = DeriveQuestId(template.Id, slotIndex);
+
+        // Seeded RNG — all random choices are deterministic per template+slot.
+        var rng = SeededRng(template.Id, slotIndex);
+
+        // Pick random name and description
+        var name = template.NamePool[rng.Next(template.NamePool.Count)];
+        var description = template.DescriptionPool.Count > 0
+            ? template.DescriptionPool[rng.Next(template.DescriptionPool.Count)]
+            : $"Complete the assigned {template.Rotation} task.";
+
+        // Build objectives and determine quest type + location
+        var (conditions, questType, location) = BuildConditions(template, traderId, rng);
+
+        // Apply {location} placeholder
+        var locationDisplay = !string.IsNullOrWhiteSpace(location)
+            ? LocationHelper.ToDisplayName(location)
+            : "Tarkov";
+        name = name.Replace("{location}", locationDisplay);
+        description = description.Replace("{location}", locationDisplay);
+
+        // Calculate rewards
+        var totalCount = template.Objectives.Sum(o => rng.Next(o.CountRange.Min, o.CountRange.Max + 1));
         var scaling = template.RewardScaling;
         var rewards = BuildRewards(traderId, totalCount, scaling);
 
@@ -139,15 +289,16 @@ public static class RepeatableQuestGenerator
             ChangeCost = changeCost,
             ChangeStandingCost = 0,
             TemplateId = GetTemplateIdForType(questType),
+            Status = 1, // AvailableForStart - makes quest appear as "available" not "locked"
             QuestStatus = new RepeatableQuestStatus
             {
-                Id = new MongoId(),
-                Uid = "",
+                Id = questId,
                 QId = questId,
-                StartTime = 0,
-                Status = 0,
-                StatusTimers = null,
-            }
+                Uid = "0", // Default player ID for old method
+                StartTime = 0, // 0 = not started
+                Status = 1, // AvailableForStart - quest is available to accept
+                StatusTimers = "",
+            },
         };
 
         // Store locale data for the quest
@@ -161,7 +312,7 @@ public static class RepeatableQuestGenerator
     }
 
     private static (QuestConditionTypes conditions, QuestTypeEnum questType, string? pickedLocation) BuildConditions(
-        RotatingQuestTemplate template, string traderId)
+        RotatingQuestTemplate template, string traderId, Random rng)
     {
         var availableForFinish = new List<QuestCondition>();
         string? pickedLocation = null;
@@ -169,9 +320,9 @@ public static class RepeatableQuestGenerator
 
         foreach (var objTemplate in template.Objectives)
         {
-            var count = Rng.Next(objTemplate.CountRange.Min, objTemplate.CountRange.Max + 1);
+            var count = rng.Next(objTemplate.CountRange.Min, objTemplate.CountRange.Max + 1);
             var location = objTemplate.LocationPool.Count > 0
-                ? objTemplate.LocationPool[Rng.Next(objTemplate.LocationPool.Count)]
+                ? objTemplate.LocationPool[rng.Next(objTemplate.LocationPool.Count)]
                 : null;
 
             if (!string.IsNullOrWhiteSpace(location))
@@ -181,13 +332,13 @@ public static class RepeatableQuestGenerator
             {
                 case "kill_enemy":
                     questType = QuestTypeEnum.Elimination;
-                    availableForFinish.Add(BuildKillCondition(objTemplate, count, location));
+                    availableForFinish.Add(BuildKillCondition(objTemplate, count, location, rng));
                     break;
                 case "handover_item":
                 case "handover_fir_item":
                     questType = QuestTypeEnum.Completion;
                     availableForFinish.Add(BuildHandoverCondition(objTemplate, count, location,
-                        objTemplate.Type.ToLowerInvariant() == "handover_fir_item"));
+                        objTemplate.Type.ToLowerInvariant() == "handover_fir_item", rng));
                     break;
                 case "survive_location":
                 case "extract_location":
@@ -223,23 +374,32 @@ public static class RepeatableQuestGenerator
         return (conditions, questType, pickedLocation);
     }
 
-    private static QuestCondition BuildKillCondition(RotatingObjectiveTemplate objTemplate, int count, string? location)
+    private static QuestCondition BuildKillCondition(RotatingObjectiveTemplate objTemplate, int count, string? location, Random rng)
     {
         var target = objTemplate.TargetPool.Count > 0
-            ? objTemplate.TargetPool[Rng.Next(objTemplate.TargetPool.Count)]
+            ? objTemplate.TargetPool[rng.Next(objTemplate.TargetPool.Count)]
             : "Savage";
 
-        var counterConditions = new List<QuestConditionCounterCondition>
+        // Determine correct Target (TargetSide) and SavageRole.
+        // PMCs (USEC/BEAR) use Target="AnyPmc". Everything else is Savage-side.
+        // Specific Savage-side types (Rogues, Raiders, bosses) go in SavageRole.
+        // Generic "Savage" and "Any" have no SavageRole.
+        var isAnyPmc = target == "AnyPmc";
+        var isGenericSavage = target == "Savage" || target == "Any";
+        var killTarget = isAnyPmc ? "AnyPmc" : "Savage";
+        List<string>? savageRole = (!isAnyPmc && !isGenericSavage) ? [target] : null;
+
+        var killCondition = new QuestConditionCounterCondition
         {
-            new()
-            {
-                Id = new MongoId(),
-                DynamicLocale = true,
-                ConditionType = "Kills",
-                Target = new ListOrT<string>(null, target),
-                Value = 1,
-            }
+            Id = new MongoId(),
+            DynamicLocale = true,
+            ConditionType = "Kills",
+            Target = new ListOrT<string>(null, killTarget),
+            Value = 1,
+            SavageRole = savageRole,
         };
+
+        var counterConditions = new List<QuestConditionCounterCondition> { killCondition };
 
         // Add location condition if specific
         if (!string.IsNullOrWhiteSpace(location) && location != "any")
@@ -257,7 +417,15 @@ public static class RepeatableQuestGenerator
         var locationDisplay = !string.IsNullOrWhiteSpace(location) && location != "any"
             ? $" on {LocationHelper.ToDisplayName(location)}"
             : "";
-        var targetDisplay = target == "Savage" ? "Scavs" : target == "exUsec" ? "Rogues" : target == "pmcBot" ? "PMCs" : target;
+        var targetDisplay = target switch
+        {
+            "Savage" => "Scavs",
+            "AnyPmc" => "PMCs",
+            "Any" => "Enemies",
+            "exUsec" => "Rogues",
+            "pmcBot" => "Raiders",
+            _ => target,
+        };
         RepeatableQuestLocaleStore.AddCondition(conditionId.ToString(), $"Eliminate {count} {targetDisplay}{locationDisplay}");
 
         return new QuestCondition
@@ -277,10 +445,10 @@ public static class RepeatableQuestGenerator
     }
 
     private static QuestCondition BuildHandoverCondition(
-        RotatingObjectiveTemplate objTemplate, int count, string? location, bool foundInRaid)
+        RotatingObjectiveTemplate objTemplate, int count, string? location, bool foundInRaid, Random rng)
     {
         var itemTpl = objTemplate.ItemPool.Count > 0
-            ? objTemplate.ItemPool[Rng.Next(objTemplate.ItemPool.Count)]
+            ? objTemplate.ItemPool[rng.Next(objTemplate.ItemPool.Count)]
             : "5449016a4bdc2d6f028b456f"; // Roubles fallback
 
         var conditionId = new MongoId();

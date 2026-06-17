@@ -185,16 +185,13 @@ export default function QuestsTab({ questPack, traderId, onChange, errors }: {
           )}
         </button>
         <button
-          onClick={() => setActiveSection('rotating')}
-          className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded text-sm font-medium transition-colors ${
-            activeSection === 'rotating' ? 'bg-tarkov-accent text-tarkov-bg' : 'text-tarkov-text-dim hover:text-tarkov-text'
-          }`}
+          disabled
+          className="flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded text-sm font-medium opacity-50 cursor-not-allowed bg-tarkov-bg/50 text-tarkov-text-dim"
         >
           <Repeat size={16} /> Rotating Templates
+          <span className="ml-1 text-xs px-1.5 py-0.5 rounded-full bg-tarkov-accent/20 text-tarkov-accent">WIP</span>
           {questPack.rotatingQuests.length > 0 && (
-            <span className={`ml-1 text-xs px-1.5 py-0.5 rounded-full ${
-              activeSection === 'rotating' ? 'bg-tarkov-bg/30 text-tarkov-bg' : 'bg-tarkov-accent/20 text-tarkov-accent'
-            }`}>{questPack.rotatingQuests.length}</span>
+            <span className="ml-1 text-xs px-1.5 py-0.5 rounded-full bg-tarkov-accent/20 text-tarkov-accent">{questPack.rotatingQuests.length}</span>
           )}
         </button>
       </div>
