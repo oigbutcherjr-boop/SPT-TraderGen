@@ -44,7 +44,7 @@ TraderGen has two parts:
 2. Fill in trader details, loyalty levels, assort items, and optionally add quests
 3. Click **Export** — the tool packages everything into a ready-to-use zip
 4. Extract the zip and drag the `SPT` folder into your SPT install directory to test
-5. Publish your pack — users only need TraderGen installed as a dependency
+5. Publish your pack — users need TraderGen and WTT - CommonLib installed as a dependency
 
 ---
 
