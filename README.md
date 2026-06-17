@@ -43,7 +43,7 @@ TraderGen has two parts:
 1. Open the **TraderGen Tool**: https://tradergen-tool.netlify.app
 2. Fill in trader details, loyalty levels, assort items, and optionally add quests
 3. Click **Export** — the tool packages everything into a ready-to-use zip
-4. Extract the zip and drag the `SPT` folder into your SPT install directory to test
+4. Extract the zip and drag the `SPT` folder into your SPT install directory to test (always use a new test/developer profile when testing)
 5. Publish your pack — users need TraderGen and WTT - CommonLib installed as a dependency
 
 > ⚠️ **Do not rename any files or images after exporting.** The mod references them by their generated names (e.g., `avatar.jpg`, `tpl_*.jpg`) — renaming will break the pack.
