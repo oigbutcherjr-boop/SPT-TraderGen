@@ -29,14 +29,19 @@
   "defaultQuestIcon": "assets/default_quest_icon.png",
 
   "storyQuests": [
-    // ---- Quest 1: Introduction quest (no prerequisites) ----
+    // ============================================================
+    // VIKTOR'S INITIATION — A 5-Quest Storyline Chain
+    // Chain: Scout -> Supplies -> Survivor -> Interloper -> Operative
+    // ============================================================
+
+    // ---- Quest 1: Scout (Entry point, no prerequisites) ----
     {
       "id": "aabbccdd112233440000aa01",
       "traderId": "aabbccdd11223344eeff5566",
-      "name": "First Impressions",
-      "description": "Viktor needs proof you can handle yourself. Eliminate 5 Scavs on Customs to earn his trust.",
-      "successMessage": "Not bad. You might be useful after all. Come back when you're ready for more.",
-      "startedMessage": "Show me what you're made of. Customs is crawling with Scavs — clean some up.",
+      "name": "Scout",
+      "description": "The situation in Tarkov is deteriorating. I need someone to assess the situation on the ground. Customs has become a warzone, overrun by scavengers. Clear the area and report back. This is a test — prove you're worth my time.",
+      "successMessage": "You made it back. Most don't on their first run. Perhaps you have potential after all.",
+      "startedMessage": "Customs is crawling with Scavs. I need you to thin their numbers and return in one piece. Don't make me regret this.",
       "location": "bigmap",
 
       "requirements": {
@@ -57,20 +62,22 @@
       "rewards": {
         "xp": 2500,
         "money": { "currency": "RUB", "amount": 15000 },
-        "items": [],
+        "items": [
+          { "itemTpl": "5755356824597772cb798962", "count": 2 }
+        ],
         "traderStanding": 0.02,
         "unlockAssortItems": []
       }
     },
 
-    // ---- Quest 2: Chained quest (requires Quest 1 complete) ----
+    // ---- Quest 2: Supplies (Requires Scout complete) ----
     {
       "id": "aabbccdd112233440000aa02",
       "traderId": "aabbccdd11223344eeff5566",
-      "name": "Supply Run",
-      "description": "Viktor is building a stockpile. Find 3 AI-2 medkits in raid and bring them to him.",
-      "successMessage": "These will do nicely. I knew you had potential.",
-      "startedMessage": "I need medical supplies — AI-2 medkits, found in raid. Don't buy them from traders.",
+      "name": "Supplies",
+      "description": "My medical supplies are depleted. The AI-2 medkit is crude but effective, and I have... contacts... who require them. Search the medical bags and caches across Tarkov. What you find in the field is what I need — no trader goods, understand?",
+      "successMessage": "Untouched by trader hands. Exactly what I needed. You're starting to understand how this works.",
+      "startedMessage": "Three AI-2 medkits. Scour the medical spawns, search the jackets and caches. Bring me what you find in the field, not some sanitized trader stock.",
       "location": "any",
 
       "requirements": {
@@ -90,20 +97,22 @@
       "rewards": {
         "xp": 3500,
         "money": { "currency": "RUB", "amount": 25000 },
-        "items": [],
+        "items": [
+          { "itemTpl": "590c657e86f77412b013051d", "count": 2 }
+        ],
         "traderStanding": 0.03,
         "unlockAssortItems": []
       }
     },
 
-    // ---- Quest 3: Survive a location ----
+    // ---- Quest 3: Survivor (Requires Supplies complete) ----
     {
       "id": "aabbccdd112233440000aa03",
       "traderId": "aabbccdd11223344eeff5566",
-      "name": "Proving Grounds",
-      "description": "Viktor wants to see if you can survive Factory. Get in, and get out alive.",
-      "successMessage": "You made it out. Good. That place is a meat grinder.",
-      "startedMessage": "Factory. Survive it. That's all.",
+      "name": "Survivor",
+      "description": "The Factory complex is a meat grinder — narrow corridors, poor visibility, constant gunfire. Most mercenaries avoid it. I need someone who can navigate that hellscape and live to tell about it. Twice. Show me you're not just lucky.",
+      "successMessage": "Twice in, twice out. Either you're skilled or the devil protects his own. Either way, I'm impressed.",
+      "startedMessage": "Factory. The place reeks of death and gunpowder. Get in, deal with whatever crosses your path, and extract alive. Do it twice. No excuses.",
       "location": "factory4_day",
 
       "requirements": {
@@ -124,9 +133,87 @@
         "xp": 5000,
         "money": { "currency": "RUB", "amount": 35000 },
         "items": [
-          { "itemTpl": "5755356824597772cb798962", "count": 5 }
+          { "itemTpl": "5d02778e86f774203e7dedbe", "count": 2 }
+        ],
+        "traderStanding": 0.04,
+        "unlockAssortItems": []
+      }
+    },
+
+    // ---- Quest 4: Interloper (Requires Survivor complete) ----
+    {
+      "id": "aabbccdd112233440000aa04",
+      "traderId": "aabbccdd11223344eeff5566",
+      "name": "Interloper",
+      "description": "Intelligence suggests USEC remnants are using the dense forest cover in the Woods area to move contraband. These are not simple Scavs — trained mercenaries, well-equipped. Intercept their operations. I want five of them dead, and I want their gear as proof.",
+      "successMessage": "The USEC network in Woods has been disrupted. You've proven you can handle professional opposition. Consider this a promotion.",
+      "startedMessage": "Woods is their highway. Find the USEC operatives moving through the trees and eliminate them. Five confirmed kills. No witnesses, no loose ends.",
+      "location": "Woods",
+
+      "requirements": {
+        "playerLevel": 5,
+        "previousQuest": "aabbccdd112233440000aa03"
+      },
+
+      "objectives": [
+        {
+          "type": "kill_enemy",
+          "target": "AnyPmc",
+          "location": "Woods",
+          "count": 5,
+          "description": "Eliminate 5 USEC or BEAR PMCs on Woods"
+        }
+      ],
+
+      "rewards": {
+        "xp": 7500,
+        "money": { "currency": "RUB", "amount": 50000 },
+        "items": [
+          { "itemTpl": "5c052f6886f7746b1e3db148", "count": 3 }
         ],
         "traderStanding": 0.05,
+        "unlockAssortItems": []
+      }
+    },
+
+    // ---- Quest 5: Operative (Final quest, requires Interloper complete) ----
+    {
+      "id": "aabbccdd112233440000aa05",
+      "traderId": "aabbccdd11223344eeff5566",
+      "name": "Operative",
+      "description": "This is the crucible. I need someone capable of operating across multiple theaters simultaneously. Reshala's crew is causing problems on Customs — deal with them. Then get to Interchange and extract safely. Two objectives, two different locations, one operative. Show me you can handle real work.",
+      "successMessage": "You handled both fronts flawlessly. Reshala is dead, and you made it out of Interchange clean. Welcome to the inner circle, operative. We have much to discuss.",
+      "startedMessage": "This is it. The real test. Take down Reshala and his guards on Customs, then get yourself to Interchange and extract alive. Two separate operations. Don't fail me now.",
+      "location": "any",
+
+      "requirements": {
+        "playerLevel": 8,
+        "previousQuest": "aabbccdd112233440000aa04"
+      },
+
+      "objectives": [
+        {
+          "type": "kill_enemy",
+          "target": "bossBully",
+          "location": "bigmap",
+          "count": 1,
+          "description": "Eliminate Reshala on Customs"
+        },
+        {
+          "type": "extract_location",
+          "location": "Interchange",
+          "count": 1,
+          "description": "Extract from Interchange"
+        }
+      ],
+
+      "rewards": {
+        "xp": 15000,
+        "money": { "currency": "RUB", "amount": 100000 },
+        "items": [
+          { "itemTpl": "5bc9c049d4351e44f824d77b", "count": 1 }
+        ],
+        "traderStanding": 0.1,
         "unlockAssortItems": []
       }
     }

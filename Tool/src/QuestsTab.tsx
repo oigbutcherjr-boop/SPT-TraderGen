@@ -400,6 +400,30 @@ function StoryQuestEditor({ quest, questIndex, allQuests, onChange, errors }: {
           placeholder="Describe what the player needs to do and why..." />
       </Field>
 
+      {/* Check if objectives span multiple maps */}
+      {(() => {
+        const objectiveLocations = quest.objectives
+          .map(o => o.location)
+          .filter((loc): loc is string => !!loc && loc !== 'any')
+        const uniqueLocations = [...new Set(objectiveLocations)]
+        const needsAnyLocation = uniqueLocations.length > 1 && quest.location !== 'any'
+
+        return needsAnyLocation ? (
+          <div className="bg-tarkov-accent/10 border border-tarkov-accent/30 rounded-lg p-3 mb-4">
+            <div className="flex items-start gap-2">
+              <AlertCircle size={16} className="text-tarkov-accent mt-0.5 shrink-0" />
+              <div className="text-sm text-tarkov-text">
+                <p className="font-medium text-tarkov-accent">Multi-Map Quest Detected</p>
+                <p className="text-tarkov-text-dim mt-1">
+                  This quest has objectives on different maps ({uniqueLocations.map(l => MAP_LOCATIONS.find(ml => ml.value === l)?.label || l).join(', ')}).
+                  Set Location to "Any Location" so the quest appears on all maps. Each objective will still require its specific map.
+                </p>
+              </div>
+            </div>
+          </div>
+        ) : null
+      })()}
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Field label="Location" tooltip="Map restriction. 'Any Location' means no map lock.">
           <select className="input-field" value={quest.location}
@@ -486,9 +510,12 @@ function StoryQuestEditor({ quest, questIndex, allQuests, onChange, errors }: {
           {quest.objectives.map((obj, oi) => {
             const isExp = expandedObj === oi
             const typeLabel = OBJECTIVE_TYPES.find(t => t.value === obj.type)?.label || obj.type
+            const objLocation = obj.location
+            const questLocation = quest.location
+            const locationMismatch = objLocation && questLocation !== 'any' && objLocation !== questLocation
 
             return (
-              <div key={oi} className="bg-tarkov-bg rounded-lg border border-tarkov-border">
+              <div key={oi} className={`bg-tarkov-bg rounded-lg border ${locationMismatch ? 'border-tarkov-error/50' : 'border-tarkov-border'}`}>
                 <div className="flex items-center justify-between px-3 py-2 cursor-pointer"
                   onClick={() => setExpandedObj(isExp ? null : oi)}>
                   <div className="flex items-center gap-2">
@@ -501,6 +528,11 @@ function StoryQuestEditor({ quest, questIndex, allQuests, onChange, errors }: {
                     {obj.location && (
                       <span className="text-xs text-tarkov-text-dim">
                         on {MAP_LOCATIONS.find(l => l.value === obj.location)?.label || obj.location}
+                      </span>
+                    )}
+                    {locationMismatch && (
+                      <span className="text-xs bg-tarkov-error/20 text-tarkov-error px-1.5 py-0.5 rounded flex items-center gap-1">
+                        <AlertCircle size={10} /> Location mismatch
                       </span>
                     )}
                   </div>
