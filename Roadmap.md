@@ -8,7 +8,7 @@ The following features are planned for future updates:
 - Distance-based kill requirements (DONE)
 - Headshot/body-part specific kills (DONE)
 - Time-of-day restrictions (day/night) (DONE)
-- Multiple combined restrictions (e.g. "Kill 5 Scavs on Woods at night using a PPSh") (TESTING)
+- Multiple combined restrictions (e.g. "Kill 5 Scavs on Woods at night using a PPSh") (DONE)
 
 ## Zone-Based Objectives
 - Visit specific locations
@@ -24,8 +24,8 @@ The following features are planned for future updates:
 - Objective dependencies (complete objective B after objective A)
 
 ## Raid-Specific Objectives
-- Kill X enemies in a single raid (TESTING)
-- Progress that resets if raid conditions are not met (TESTING)
+- Kill X enemies in a single raid (DONE)
+- Progress that resets if raid conditions are not met (DONE)
 
 ## Trader Additions/Changes
 - Ability to add and modify advanced items (custom weapon builds - armour with plates etc.) (DONE)
