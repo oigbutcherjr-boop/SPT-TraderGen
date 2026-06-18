@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using BepInEx.Logging;
+using EFT.InventoryLogic;
 using EFT.UI;
 using HarmonyLib;
 using Newtonsoft.Json;
@@ -16,6 +17,7 @@ namespace TraderGen.Client.Patches
     {
         internal static ManualLogSource Log;
         private static GameObject _statusGo;
+        private static Item _contextMenuItem;
 
         internal static void Init(ManualLogSource log)
         {
@@ -23,6 +25,7 @@ namespace TraderGen.Client.Patches
             _statusGo = new GameObject("TraderGen_StatusToast");
             UnityEngine.Object.DontDestroyOnLoad(_statusGo);
             _statusGo.AddComponent<StatusToastBehaviour>();
+
             Log?.LogInfo("[TraderGen] WeaponBuildExportPatch initialized.");
         }
 
@@ -72,6 +75,28 @@ namespace TraderGen.Client.Patches
                 catch (Exception ex)
                 {
                     Log?.LogError($"[TraderGen] Failed to inject button: {ex}");
+                }
+            }
+        }
+
+        [HarmonyPatch(typeof(EFT.UI.DragAndDrop.ItemView), "ShowContextMenu")]
+        internal static class ItemViewShowContextMenuPatch
+        {
+            [HarmonyPrefix]
+            static void Prefix(EFT.UI.DragAndDrop.ItemView __instance)
+            {
+                try
+                {
+                    var itemContext = __instance.ItemContext;
+                    if (itemContext != null)
+                    {
+                        _contextMenuItem = itemContext.Item;
+                        Log?.LogInfo($"[TraderGen] Stored context menu item: {_contextMenuItem?.Name} ({_contextMenuItem?.GetType().Name}) tpl={_contextMenuItem?.TemplateId}");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Log?.LogDebug($"[TraderGen] ItemViewShowContextMenuPatch failed: {ex.Message}");
                 }
             }
         }
@@ -237,6 +262,118 @@ namespace TraderGen.Client.Patches
             }
 
             return node;
+        }
+
+        [HarmonyPatch(typeof(ItemUiContext), "ShowContextMenu")]
+        internal static class ItemUiContextShowContextMenuPatch
+        {
+            [HarmonyPostfix]
+            static void Postfix(ItemUiContext __instance)
+            {
+                try
+                {
+                    var item = _contextMenuItem;
+                    if (item == null)
+                    {
+                        Log?.LogDebug("[TraderGen] ShowContextMenu postfix: no stored item.");
+                        return;
+                    }
+
+                    if (!ShouldExportItem(item))
+                    {
+                        Log?.LogDebug($"[TraderGen] ShowContextMenu postfix: item type '{item.GetType().Name}' rejected.");
+                        return;
+                    }
+
+                    var contextMenu = __instance.ContextMenu;
+                    if (contextMenu == null)
+                    {
+                        Log?.LogWarning("[TraderGen] ShowContextMenu postfix: ContextMenu is null.");
+                        return;
+                    }
+
+                    var ibcField = typeof(SimpleContextMenu).GetField("_interactionButtonsContainer", BindingFlags.Instance | BindingFlags.NonPublic);
+                    var container = ibcField?.GetValue(contextMenu) as InteractionButtonsContainer;
+                    if (container == null)
+                    {
+                        Log?.LogWarning("[TraderGen] ShowContextMenu postfix: InteractionButtonsContainer is null.");
+                        return;
+                    }
+
+                    var buttonsContainerField = typeof(InteractionButtonsContainer).GetField("_buttonsContainer", BindingFlags.Instance | BindingFlags.NonPublic);
+                    var buttonsContainer = buttonsContainerField?.GetValue(container) as Transform;
+                    if (buttonsContainer == null)
+                    {
+                        Log?.LogWarning("[TraderGen] ShowContextMenu postfix: _buttonsContainer is null.");
+                        return;
+                    }
+                    var existing = buttonsContainer.Find("ExportToTraderGen");
+                    if (existing != null)
+                    {
+                        UnityEngine.Object.Destroy(existing.gameObject);
+                        Log?.LogDebug("[TraderGen] ShowContextMenu postfix: destroyed old button.");
+                    }
+
+                    var templateField = typeof(InteractionButtonsContainer).GetField("_buttonTemplate", BindingFlags.Instance | BindingFlags.NonPublic);
+                    var template = templateField?.GetValue(container) as SimpleContextMenuButton;
+                    if (template == null)
+                    {
+                        Log?.LogWarning("[TraderGen] ShowContextMenu postfix: _buttonTemplate is null.");
+                        return;
+                    }
+
+                    var templateGo = template.GetType().GetProperty("gameObject", BindingFlags.Instance | BindingFlags.Public)?.GetValue(template) as GameObject;
+                    if (templateGo == null)
+                    {
+                        Log?.LogWarning("[TraderGen] ShowContextMenu postfix: could not get template GameObject.");
+                        return;
+                    }
+
+                    var clonedGo = UnityEngine.Object.Instantiate(templateGo, buttonsContainer);
+                    clonedGo.name = "ExportToTraderGen";
+                    clonedGo.transform.SetAsLastSibling();
+                    var cloned = clonedGo.GetComponent<SimpleContextMenuButton>();
+
+                    Action onClick = () => ExportItem(_contextMenuItem);
+                    cloned?.Show("EXPORT TO TG", "EXPORT TO TG", null, onClick, null, false, true);
+
+                    Log?.LogInfo("[TraderGen] Injected context menu export button via ShowContextMenu postfix.");
+                }
+                catch (Exception ex)
+                {
+                    Log?.LogError($"[TraderGen] ShowContextMenu postfix failed: {ex}");
+                }
+            }
+
+            static bool ShouldExportItem(Item item)
+            {
+                var typeName = item.GetType().Name.ToLowerInvariant();
+                return typeName.Contains("armor") || typeName.Contains("vest") || typeName.Contains("rig") || typeName.Contains("backpack") || typeName.Contains("weapon");
+            }
+
+            static void ExportItem(Item item)
+            {
+                try
+                {
+                    var json = WalkItemTree(item, item.GetType());
+                    if (!string.IsNullOrEmpty(json))
+                    {
+                        GUIUtility.systemCopyBuffer = json;
+                        ShowStatus("Item copied to clipboard!");
+                        Log?.LogInfo("[TraderGen] Item exported to clipboard.");
+                    }
+                    else
+                    {
+                        ShowStatus("Could not read item data.");
+                        Log?.LogWarning("[TraderGen] Failed to extract item data.");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    ShowStatus("Export failed.");
+                    Log?.LogError($"[TraderGen] Export failed: {ex}");
+                }
+            }
         }
 
         [Serializable]

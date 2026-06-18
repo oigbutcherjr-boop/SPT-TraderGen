@@ -55,6 +55,10 @@
       <HintPath>$(SPTPath)\EscapeFromTarkov_Data\Managed\Comfort.dll</HintPath>
       <Private>false</Private>
     </Reference>
+    <Reference Include="Sirenix.Serialization">
+      <HintPath>$(SPTPath)\EscapeFromTarkov_Data\Managed\Sirenix.Serialization.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
   </ItemGroup>
 
   <!-- Auto-deploy to BepInEx plugins after build -->
