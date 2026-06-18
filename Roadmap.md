@@ -24,8 +24,8 @@ The following features are planned for future updates:
 - Objective dependencies (complete objective B after objective A)
 
 ## Raid-Specific Objectives
-- Kill X enemies in a single raid (DONE - use "One Session Only" checkbox)
-- Progress that resets if raid conditions are not met (DONE - use "One Session Only" checkbox)
+- Kill X enemies in a single raid (TESTING)
+- Progress that resets if raid conditions are not met (TESTING)
 
 ## Trader Additions/Changes
 - Ability to add and modify advanced items (custom weapon builds etc.)
