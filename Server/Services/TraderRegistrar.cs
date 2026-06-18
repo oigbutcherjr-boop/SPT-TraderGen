@@ -4,6 +4,7 @@ using SPTarkov.DI.Annotations;
 using SPTarkov.Server.Core.DI;
 using SPTarkov.Server.Core.Models.Common;
 using SPTarkov.Server.Core.Models.Eft.Common.Tables;
+using SPTarkov.Server.Core.Models.Enums;
 using SPTarkov.Server.Core.Models.Logging;
 using SPTarkov.Server.Core.Models.Spt.Config;
 using SPTarkov.Server.Core.Helpers;
@@ -31,10 +32,95 @@ public class TraderRegistrar(
     private readonly TraderConfig _traderConfig = configServer.GetConfig<TraderConfig>();
     private readonly RagfairConfig _ragfairConfig = configServer.GetConfig<RagfairConfig>();
 
-    // Default buy categories.
+    // Default buy categories (all known vanilla item parent IDs).
     private static readonly List<string> DefaultBuyCategories =
     [
-        "5d1c819a86f774771b0acd6c", // Weapon parts
+        "5422acb9af1c889c16000029", // Weapon
+        "5448fe124bdc2da5018b4567", // Mod
+        "5485a8684bdc2da71d8b4567", // Ammo
+        "57864c8c245977548867e7f1", // MedicalSupplies
+        "543be6674bdc2df1348b4569", // FoodDrink
+        "543be5664bdc2dd4348b4569", // Meds
+        "57864ee62459775490116fc1", // Battery
+        "5447e1d04bdc2dff2f8b4567", // Knife
+        "5795f317245977243854e041", // SimpleContainer
+        "5671435f4bdc2d96058b4569", // LockableContainer
+        "5448e53e4bdc2d60728b4567", // Backpack
+        "5448e5284bdc2dcb718b4567", // Vest
+        "57864e4c24597754843f8723", // Lubricant
+        "57864ada245977548638de91", // BuildingMaterial
+        "5447b6194bdc2d67278b4567", // MarksmanRifle
+        "5447b6094bdc2dc3278b4567", // Shotgun
+        "5447b6254bdc2dc3278b4568", // SniperRifle
+        "55818ae44bdc2dde698b456c", // OpticScope
+        "55818aeb4bdc2ddc698b456a", // SpecialScope
+        "55818add4bdc2d5b648b456f", // AssaultScope
+        "555ef6e44bdc2de9068b457e", // Barrel
+        "55818b224bdc2dde698b456f", // Mount
+        "55818a594bdc2db9688b456a", // Stock
+        "543be5f84bdc2dd4348b456a", // Equipment
+        "6759673c76e93d8eb20b2080", // Flyer
+        "5661632d4bdc2d903d8b456b", // StackableItem
+        "5447e0e74bdc2d3c308b4567", // SpecItem
+        "567849dd4bdc2d150f8b456e", // Map
+        "543be6564bdc2df4348b4568", // ThrowWeap
+        "5448eb774bdc2d0a728b4567", // BarterItem
+        "5448ecbe4bdc2d60728b4568", // Info
+        "616eb7aea207f41933308f46", // RepairKits
+        "543be5e94bdc2df1348b4568", // Key
+        "543be5cb4bdc2deb348b4568", // AmmoBox
+        "57864a66245977548f04a81f", // Electronics
+        "57864bb7245977548b3b66c2", // Tool
+        "5c164d2286f774194c5e69fa", // Keycard
+        "57864a3d24597754843f8721", // Jewelry
+        "590c745b86f7743cc433c5f2", // Other
+        "5448f3a64bdc2d60728b456a", // Stimulator
+        "5d650c3e815116009f6201d2", // Fuel
+        "5448e54d4bdc2dcc718b4568", // Armor
+        "5c99f98d86f7745c314214b3", // KeyMechanical
+        "57bef4c42459772e8d35a53b", // ArmoredEquipment
+        "5d1c819a86f774771b0acd6c", // WeaponParts
+        "5448f39d4bdc2d0a728b4568", // MedKit
+        "5448f3ac4bdc2dce718b4569", // Medical
+        "5448e8d04bdc2ddf718b4569", // Food
+        "5a341c4086f77401f2541505", // Headwear
+        "543be5dd4bdc2deb348b4569", // Money
+    ];
+
+    // Default sell categories (handbook IDs used by SPT client to filter trader items).
+    private static readonly List<string> DefaultSellCategories =
+    [
+        "5b47574386f77428ca22b33e", // Barter / Loot
+        "5b47574386f77428ca22b33f", // Gear (armour, rigs, helmets, backpacks, etc.)
+        "5b47574386f77428ca22b346", // Ammo
+        "5b47574386f77428ca22b345", // Special equipment
+        "5b47574386f77428ca22b343", // Maps
+        "5b5f71b386f774093f2ecf11", // Weapons – assault rifles
+        "5b5f71c186f77409407a7ec0", // Weapons – assault carbines
+        "5b5f71de86f774093f2ecf13", // Weapons – machine guns
+        "5b5f724186f77447ed5636ad", // Weapons – SMGs
+        "5b5f736886f774094242f193", // Weapons – shotguns
+        "5b5f73ec86f774093e6cb4fd", // Weapons – pistols
+        "5b5f74cc86f77447ec5d770a", // Weapons – marksman rifles
+        "5b5f750686f774093e6cb503", // Weapons – sniper rifles
+        "5b5f751486f77447ec5d770c", // Weapons – grenade launchers
+        "5b5f752e86f774093e6cb505", // Weapons – special weapons
+        "5b5f754a86f774094242f19b", // Weapons – melee
+        "5b5f755f86f77447ec5d770e", // Weapons – throwables
+        "5b5f757486f774093e6cb507", // Weapon mods – functional
+        "5b5f75b986f77447ec5d7710", // Weapon mods – gear mods
+        "5b5f75c686f774094242f19f", // Weapon mods – muzzle
+        "5b5f75e486f77447ec5d7712", // Weapon mods – sights
+        "5b5f760586f774093e6cb509", // Weapon mods – magazine
+        "5b5f761f86f774094242f1a1", // Weapon mods – stock
+        "575146b724597720a27126d5", // Weapon mods – barrel
+        "635a758bfefc88a93f021b8a", // Weapon mods – handguard
+        "55d45d3f4bdc2d972f8b456c", // Weapon mods – mount
+        "5b363dd25acfc4001a598fd2", // Weapon mods – charging handle
+        "5d1b36a186f7742523398433", // Weapon mods – launcher
+        "59e3577886f774176a362503", // Weapon mods – bipod
+        "5d6e67fba4b9361bc73bc779", // Weapon mods – foregrip
+        "5b5f764186f77447ec5d7714", // Weapon mods – tactical
     ];
 
     // Register a single trader.
@@ -88,7 +174,10 @@ public class TraderRegistrar(
     // Build TraderBase from trader definition.
     private TraderBase BuildTraderBase(TraderDefinition trader, string packFolder)
     {
-        var buyCategories = trader.BuyCategories ?? DefaultBuyCategories;
+        var buyCategories = new List<string>(trader.BuyCategories ?? DefaultBuyCategories);
+        var sellCategories = trader.SellCategories is { Count: > 0 }
+            ? new List<string>(trader.SellCategories)
+            : null;
         var buyProhibited = trader.BuyProhibitedItems ?? new List<string>();
         var currency = trader.Currency.ToUpperInvariant() switch
         {
@@ -151,43 +240,7 @@ public class TraderRegistrar(
                 excluded_id_list = Array.Empty<string>(),
                 quality = "2",
             },
-            sell_category = trader.SellCategories?.Count > 0
-                ? trader.SellCategories
-                :
-                [
-                    // Handbook category IDs (used by SPT client to filter trader items)
-                    "5b47574386f77428ca22b33e", // Barter / Loot
-                    "5b47574386f77428ca22b33f", // Gear (armour, rigs, helmets, backpacks, etc.)
-                    "5b47574386f77428ca22b346", // Ammo
-                    "5b47574386f77428ca22b345", // Special equipment
-                    "5b47574386f77428ca22b343", // Maps
-                    "5b5f71b386f774093f2ecf11", // Weapons – assault rifles
-                    "5b5f71c186f77409407a7ec0", // Weapons – assault carbines
-                    "5b5f71de86f774093f2ecf13", // Weapons – machine guns
-                    "5b5f724186f77447ed5636ad", // Weapons – SMGs
-                    "5b5f736886f774094242f193", // Weapons – shotguns
-                    "5b5f73ec86f774093e6cb4fd", // Weapons – pistols
-                    "5b5f74cc86f77447ec5d770a", // Weapons – marksman rifles
-                    "5b5f750686f774093e6cb503", // Weapons – sniper rifles
-                    "5b5f751486f77447ec5d770c", // Weapons – grenade launchers
-                    "5b5f752e86f774093e6cb505", // Weapons – special weapons
-                    "5b5f754a86f774094242f19b", // Weapons – melee
-                    "5b5f755f86f77447ec5d770e", // Weapons – throwables
-                    "5b5f757486f774093e6cb507", // Weapon mods – functional
-                    "5b5f75b986f77447ec5d7710", // Weapon mods – gear mods
-                    "5b5f75c686f774094242f19f", // Weapon mods – muzzle
-                    "5b5f75e486f77447ec5d7712", // Weapon mods – sights
-                    "5b5f760586f774093e6cb509", // Weapon mods – magazine
-                    "5b5f761f86f774094242f1a1", // Weapon mods – stock
-                    "575146b724597720a27126d5", // Weapon mods – barrel
-                    "635a758bfefc88a93f021b8a", // Weapon mods – handguard
-                    "55d45d3f4bdc2d972f8b456c", // Weapon mods – mount
-                    "5b363dd25acfc4001a598fd2", // Weapon mods – charging handle
-                    "5d1b36a186f7742523398433", // Weapon mods – launcher
-                    "59e3577886f774176a362503", // Weapon mods – bipod
-                    "5d6e67fba4b9361bc73bc779", // Weapon mods – foregrip
-                    "5b5f764186f77447ec5d7714", // Weapon mods – tactical
-                ],
+            sell_category = sellCategories ?? new List<string>(), // Vanilla traders use empty sell_category
             sell_modifier_for_prohibited_items = 0,
             surname = trader.LastName,
             transferableItems = new
@@ -388,11 +441,29 @@ public class TraderRegistrar(
             // Barter trade
             foreach (var barter in assortItem.Barter)
             {
-                schemeItems.Add(new BarterScheme
+                var isDogtag = DogtagIds.Contains(barter.ItemTpl);
+                var scheme = new BarterScheme
                 {
-                    Template = barter.ItemTpl,
+                    Template = NormalizeDogtagId(barter.ItemTpl, barter.Side),
                     Count = barter.Count,
-                });
+                };
+                if (barter.Level.HasValue)
+                {
+                    scheme.Level = barter.Level.Value;
+                }
+                else if (isDogtag)
+                {
+                    scheme.Level = 1;
+                }
+                if (!string.IsNullOrEmpty(barter.Side))
+                {
+                    scheme.Side = Enum.Parse<DogtagExchangeSide>(barter.Side, true);
+                }
+                else if (isDogtag)
+                {
+                    scheme.Side = DogtagExchangeSide.Any;
+                }
+                schemeItems.Add(scheme);
             }
         }
         else
@@ -408,6 +479,29 @@ public class TraderRegistrar(
 
         // SPT expects List<List<BarterScheme>>
         return [schemeItems];
+    }
+
+    // Base vanilla dogtag IDs used in barter schemes.
+    private static readonly string[] DogtagIds =
+    [
+        "59f32bb586f774757e1e8442", // BEAR
+        "59f32c3b86f77472a31742f0", // USEC
+        "6662e9aca7e0b43baa3d5f74", // BEAR
+        "6662e9cda7e0b43baa3d5f76", // BEAR
+        "6662e9f37fa79a6d83730fa0", // USEC
+        "6662ea05f6259762c56f3189", // USEC
+        "675dc9d37ae1a8792107ca96", // BEAR
+        "675dcb0545b1a2d108011b2b", // BEAR
+    ];
+
+    private static readonly string DogtagBaseBear = "59f32bb586f774757e1e8442";
+    private static readonly string DogtagBaseUsec = "59f32c3b86f77472a31742f0";
+
+    // Normalizes any dogtag ID to the two base vanilla IDs used in assort.json.
+    private static string NormalizeDogtagId(string id, string? side)
+    {
+        if (!DogtagIds.Contains(id)) return id;
+        return side == "Bear" ? DogtagBaseBear : DogtagBaseUsec;
     }
 
     // Recursively walk a tree of AssortChildItem and flatten into a flat SPT Item list.
@@ -432,4 +526,5 @@ public class TraderRegistrar(
             }
         }
     }
+
 }

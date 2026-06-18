@@ -215,4 +215,12 @@ public class BarterRequirement
     // How many of this item are required.
     [JsonPropertyName("count")]
     public int Count { get; set; } = 1;
+
+    // Minimum PMC level on the dogtag (only used for dogtag barters).
+    [JsonPropertyName("level")]
+    public int? Level { get; set; }
+
+    // Faction side of the dogtag: "Bear", "Usec", or "Any" (only used for dogtag barters).
+    [JsonPropertyName("side")]
+    public string? Side { get; set; }
 }

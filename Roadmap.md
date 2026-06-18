@@ -30,4 +30,5 @@ The following features are planned for future updates:
 ## Trader Additions/Changes
 - Ability to add and modify advanced items (custom weapon builds - armour with plates etc.) (DONE)
 - Ability to state item whitelist/blacklist for buying/selling
+- Ability to use Dogtags (Side & Level) for bartering
 

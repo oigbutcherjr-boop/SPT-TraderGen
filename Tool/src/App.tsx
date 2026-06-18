@@ -3,6 +3,7 @@ import {
   Store, Plus, Trash2, Download, AlertCircle, CheckCircle,
   ChevronDown, ChevronUp, Copy, RefreshCw, Eye, Package,
   Shield, Star, Settings, FileJson, HelpCircle, ExternalLink, Upload, Crosshair,
+  X, Tag,
 } from 'lucide-react'
 import JSZip from 'jszip'
 import { saveAs } from 'file-saver'
@@ -12,7 +13,7 @@ import type {
 } from './types'
 import {
   createDefaultTrader, createDefaultAssortItem, createDefaultBarter, createDefaultAssortChild, generateMongoId,
-  createDefaultQuestPack,
+  createDefaultQuestPack, isDogtagId, getDogtagSide, VANILLA_BUY_CATEGORIES,
 } from './types'
 import { validateTrader, buildExportJson, validateQuestPack, buildQuestExportJson } from './validation'
 import QuestsTab from './QuestsTab'
@@ -349,9 +350,25 @@ export default function App() {
         i === assortIndex
           ? {
               ...item,
-              barter: (item.barter || []).map((b, j) =>
-                j === barterIndex ? { ...b, [key]: value } : b
-              ),
+              barter: (item.barter || []).map((b, j) => {
+                if (j !== barterIndex) return b
+                const update: Partial<BarterRequirement> = { [key]: value }
+                // Auto-set side and default level when a dogtag template ID is entered
+                if (key === 'itemTpl' && typeof value === 'string') {
+                  const side = getDogtagSide(value)
+                  if (side) {
+                    update.side = side
+                    if (b.level === undefined || b.level === null) {
+                      update.level = 1
+                    }
+                  } else if (b.side && isDogtagId(b.itemTpl)) {
+                    // Clear side/level if the user changes from a dogtag to a non-dogtag
+                    update.side = undefined
+                    update.level = undefined
+                  }
+                }
+                return { ...b, ...update }
+              }),
             }
           : item
       ),
@@ -744,6 +761,100 @@ function GeneralTab({ trader, update, hasError, errorsByField }: {
           </Field>
         </div>
       </section>
+
+      <section className="card">
+        <h2 className="text-lg font-semibold text-tarkov-accent mb-4 flex items-center gap-2">
+          <Tag size={18} /> Buy Categories
+        </h2>
+        <p className="text-xs text-tarkov-text-dim mb-3">
+          Item categories this trader will buy from the player. Leave empty to use the default set.
+        </p>
+        <BuyCategoriesEditor
+          categories={trader.buyCategories ?? []}
+          onChange={cats => update('buyCategories', cats.length > 0 ? cats : undefined)}
+        />
+      </section>
+    </div>
+  )
+}
+
+/* ===== BUY CATEGORIES EDITOR ===== */
+function BuyCategoriesEditor({ categories, onChange }: {
+  categories: string[]
+  onChange: (categories: string[]) => void
+}) {
+  const [selectedId, setSelectedId] = useState<string>('')
+  const [customId, setCustomId] = useState<string>('')
+  const isOther = selectedId === '__other__'
+
+  const addCategory = () => {
+    const idToAdd = isOther ? customId.trim() : selectedId
+    if (!idToAdd || idToAdd.length !== 24) return
+    if (categories.includes(idToAdd)) return
+    onChange([...categories, idToAdd])
+    setSelectedId('')
+    setCustomId('')
+  }
+
+  const removeCategory = (id: string) => {
+    onChange(categories.filter(c => c !== id))
+  }
+
+  const nameForId = (id: string) => {
+    const found = VANILLA_BUY_CATEGORIES.find(c => c.id === id)
+    return found ? found.name : id
+  }
+
+  return (
+    <div className="space-y-3">
+      {/* Selected category chips */}
+      {categories.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {categories.map(id => (
+            <div key={id} className="flex items-center gap-1 bg-tarkov-accent/10 border border-tarkov-accent/30 text-tarkov-text text-sm px-2 py-1 rounded">
+              <span>{nameForId(id)}</span>
+              <button onClick={() => removeCategory(id)} className="text-tarkov-text-dim hover:text-tarkov-error ml-1" title="Remove">
+                <X size={14} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Add category row */}
+      <div className="flex items-start gap-2">
+        <div className="flex-1">
+          <select
+            className="input-field w-full"
+            value={selectedId}
+            onChange={e => { setSelectedId(e.target.value); setCustomId('') }}
+          >
+            <option value="">Select a category...</option>
+            {VANILLA_BUY_CATEGORIES.map(c => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+            <option value="__other__">Other (custom ID)...</option>
+          </select>
+        </div>
+        {isOther && (
+          <div className="flex-[2]">
+            <input
+              className="input-field w-full font-mono text-sm"
+              value={customId}
+              onChange={e => setCustomId(e.target.value.replace(/[^0-9a-fA-F]/g, '').slice(0, 24))}
+              placeholder="24-char hex category ID"
+              maxLength={24}
+            />
+          </div>
+        )}
+        <button
+          onClick={addCategory}
+          disabled={isOther ? (customId.length !== 24) : !selectedId}
+          className="btn-secondary text-sm flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <Plus size={14} /> Add
+        </button>
+      </div>
     </div>
   )
 }
@@ -989,25 +1100,49 @@ function AssortTab({ assort, loyaltyLevels, defaultCurrency, expanded, onToggle,
 
                     {isBarter && (
                       <div className="space-y-2">
-                        {(item.barter || []).map((b, j) => (
-                          <div key={j} className="flex items-end gap-2">
-                            <div className="flex-1">
-                              <label className="label">Item Template ID</label>
-                              <input className="input-field font-mono text-sm" value={b.itemTpl}
-                                onChange={e => onUpdateBarter(i, j, 'itemTpl', e.target.value)}
-                                placeholder="24-char hex ID" maxLength={24} />
+                        {(item.barter || []).map((b, j) => {
+                          const showDogtag = isDogtagId(b.itemTpl)
+                          return (
+                            <div key={j} className="space-y-1">
+                              <div className="flex items-end gap-2">
+                                <div className="flex-1">
+                                  <label className="label">Item Template ID</label>
+                                  <input className="input-field font-mono text-sm" value={b.itemTpl}
+                                    onChange={e => onUpdateBarter(i, j, 'itemTpl', e.target.value)}
+                                    placeholder="24-char hex ID" maxLength={24} />
+                                </div>
+                                <div className="w-24">
+                                  <label className="label">Count</label>
+                                  <input type="number" className="input-field" value={b.count}
+                                    onChange={e => onUpdateBarter(i, j, 'count', Number(e.target.value))} min={1} />
+                                </div>
+                                <button onClick={() => onRemoveBarter(i, j)}
+                                  className="text-tarkov-error hover:text-tarkov-error/80 mb-2">
+                                  <Trash2 size={14} />
+                                </button>
+                              </div>
+                              {showDogtag && (
+                                <div className="flex items-end gap-2">
+                                  <div className="w-24">
+                                    <label className="label">Dogtag Level</label>
+                                    <input type="number" className="input-field" value={b.level ?? 1}
+                                      onChange={e => onUpdateBarter(i, j, 'level', Number(e.target.value))} min={1} />
+                                  </div>
+                                  <div className="w-32">
+                                    <label className="label">Dogtag Side</label>
+                                    <select className="input-field text-sm"
+                                      value={b.side || 'Any'}
+                                      onChange={e => onUpdateBarter(i, j, 'side', e.target.value)}>
+                                      <option value="Bear">Bear</option>
+                                      <option value="Usec">Usec</option>
+                                      <option value="Any">Any</option>
+                                    </select>
+                                  </div>
+                                </div>
+                              )}
                             </div>
-                            <div className="w-24">
-                              <label className="label">Count</label>
-                              <input type="number" className="input-field" value={b.count}
-                                onChange={e => onUpdateBarter(i, j, 'count', Number(e.target.value))} min={1} />
-                            </div>
-                            <button onClick={() => onRemoveBarter(i, j)}
-                              className="text-tarkov-error hover:text-tarkov-error/80 mb-2">
-                              <Trash2 size={14} />
-                            </button>
-                          </div>
-                        ))}
+                          )
+                        })}
                         <button onClick={() => onAddBarter(i)} className="text-xs btn-secondary flex items-center gap-1 mt-2">
                           <Plus size={12} /> Add Barter Item
                         </button>
@@ -1261,7 +1396,7 @@ function FieldErrors({ errors }: { errors: ValidationError[] }) {
 }
 
 const SLOTS_BY_CATEGORY: Record<string, string[]> = {
-  'Weapon': ['mod_pistol_grip', 'mod_stock', 'mod_magazine', 'mod_muzzle', 'mod_reciever', 'mod_sight_rear', 'mod_sight_front', 'mod_gas_block', 'mod_handguard', 'mod_foregrip', 'mod_scope', 'mod_tactical', 'mod_bipod', 'mod_launcher', 'mod_nvg', 'mod_mount', 'mod_charge'],
+  'Weapon': ['mod_pistol_grip', 'mod_stock', 'mod_magazine', 'mod_muzzle', 'mod_reciever', 'mod_barrel', 'mod_sight_rear', 'mod_sight_front', 'mod_gas_block', 'mod_handguard', 'mod_foregrip', 'mod_scope', 'mod_tactical', 'mod_bipod', 'mod_launcher', 'mod_nvg', 'mod_mount', 'mod_charge', 'mod_tactical_000', 'mod_flashlight', 'mod_mount_001', 'mod_stock_000'],
   'Armour': ['Front_plate', 'Back_plate', 'Left_plate', 'Right_plate', 'Soft_armor_front', 'Soft_armor_back', 'Soft_armor_left', 'Soft_armor_right', 'Groin', 'Groin_back', 'Collar', 'Shoulder_l', 'Shoulder_r'],
   'Helmet': ['Helmet_top', 'Helmet_back', 'Helmet_ears', 'Helmet_visor'],
   'Gear': ['Pockets', 'SecuredContainer', 'Vest', 'Backpack', 'FaceCover', 'Eyewear', 'Earpiece', 'Headwear'],

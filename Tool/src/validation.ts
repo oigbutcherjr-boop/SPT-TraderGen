@@ -1,4 +1,5 @@
 import type { TraderDefinition, QuestPackDefinition, ValidationError } from './types'
+import { isDogtagId, normalizeDogtagId } from './types'
 
 const HEX_24 = /^[0-9a-fA-F]{24}$/
 const VALID_CURRENCIES = ['RUB', 'USD', 'EUR']
@@ -76,6 +77,15 @@ export function validateTrader(trader: TraderDefinition): ValidationError[] {
         if (b.count < 1) {
           errors.push({ field: `assort.${i}.barter.${j}`, message: `${prefix}.barter[${j}]: count must be >= 1.` })
         }
+        if (isDogtagId(b.itemTpl)) {
+          if (b.level === undefined || b.level === null || b.level < 1) {
+            errors.push({ field: `assort.${i}.barter.${j}.level`, message: `${prefix}.barter[${j}]: Dogtag barter requires a level >= 1.` })
+          }
+          const validSides = ['Bear', 'Usec', 'Any']
+          if (!b.side || !validSides.includes(b.side)) {
+            errors.push({ field: `assort.${i}.barter.${j}.side`, message: `${prefix}.barter[${j}]: Dogtag barter requires side (Bear / Usec / Any).` })
+          }
+        }
       }
     }
 
@@ -137,7 +147,15 @@ export function buildExportJson(trader: TraderDefinition): object {
       }
       if (!item.unlimitedStock) out.stock = item.stock
       if (item.barter && item.barter.length > 0) {
-        out.barter = item.barter
+        out.barter = item.barter.map(b => {
+          const isDogtag = isDogtagId(b.itemTpl)
+          return {
+            ...b,
+            itemTpl: normalizeDogtagId(b.itemTpl, b.side),
+            level: isDogtag ? (b.level ?? 1) : b.level,
+            side: isDogtag ? (b.side || 'Any') : b.side,
+          }
+        })
       } else {
         out.price = item.price
         if (item.currency) out.currency = item.currency
@@ -149,6 +167,7 @@ export function buildExportJson(trader: TraderDefinition): object {
   }
 
   if (trader.fullName) output.fullName = trader.fullName
+  if (trader.buyCategories && trader.buyCategories.length > 0) output.buyCategories = trader.buyCategories
 
   return output
 }
