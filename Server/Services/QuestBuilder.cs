@@ -357,10 +357,6 @@ public static class QuestBuilder
             });
         }
 
-        // TODO: weaponCategories — BSG uses weaponCaliber, not generic categories. Mapping not yet implemented.
-        // TODO: surviveAfterKill — Not directly representable in a single counter condition.
-        //       In vanilla quests this is always split into two separate objectives (kill + survive/extract).
-
         // Build locale for this objective with advanced condition hints.
         var locationDisplay = !string.IsNullOrWhiteSpace(obj.Location) ? LocationHelper.ToDisplayName(obj.Location) : null;
         var locationText = locationDisplay != null ? $" on {locationDisplay}" : "";
@@ -397,7 +393,7 @@ public static class QuestBuilder
             ["globalQuestCounterId"] = "",
             ["id"] = condId,
             ["index"] = index,
-            ["oneSessionOnly"] = false,
+            ["oneSessionOnly"] = obj.OneSessionOnly,
             ["parentId"] = "",
             ["type"] = "Elimination",
             ["value"] = obj.Count,
@@ -448,7 +444,7 @@ public static class QuestBuilder
             ["globalQuestCounterId"] = "",
             ["id"] = condId,
             ["index"] = index,
-            ["oneSessionOnly"] = false,
+            ["oneSessionOnly"] = obj.OneSessionOnly,
             ["parentId"] = "",
             ["type"] = "Exploration",
             ["value"] = obj.Count,

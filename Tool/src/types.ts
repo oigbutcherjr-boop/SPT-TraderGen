@@ -90,14 +90,13 @@ export interface QuestObjective {
   minDistance?: number | null
   maxDistance?: number | null
   weaponTpls?: string[]
-  weaponCategories?: string[]
   wearing?: string[]
   notWearing?: string[]
   timeFrom?: number | null
   timeTo?: number | null
   bodyPart?: string[]
-  surviveAfterKill?: boolean
   requiredExtract?: string
+  oneSessionOnly?: boolean
 }
 
 export interface QuestRewards {

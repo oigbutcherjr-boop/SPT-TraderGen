@@ -301,14 +301,13 @@ export function buildQuestExportJson(pack: QuestPackDefinition): object | null {
           if (obj.minDistance != null) o.minDistance = obj.minDistance
           if (obj.maxDistance != null) o.maxDistance = obj.maxDistance
           if (obj.weaponTpls?.length) o.weaponTpls = obj.weaponTpls
-          if (obj.weaponCategories?.length) o.weaponCategories = obj.weaponCategories
           if (obj.wearing?.length) o.wearing = obj.wearing
           if (obj.notWearing?.length) o.notWearing = obj.notWearing
           if (obj.timeFrom != null) o.timeFrom = obj.timeFrom
           if (obj.timeTo != null) o.timeTo = obj.timeTo
           if (obj.bodyPart?.length) o.bodyPart = obj.bodyPart
-          if (obj.surviveAfterKill) o.surviveAfterKill = true
           if (obj.requiredExtract) o.requiredExtract = obj.requiredExtract
+          if (obj.oneSessionOnly) o.oneSessionOnly = true
           return o
         }),
         rewards: buildRewardsJson(q.rewards),

@@ -883,19 +883,6 @@ function AdvancedConditions({ objective, onChange }: {
             />
           )}
 
-          {/* Weapon categories (not yet implemented) */}
-          {isKill && (
-            <StringListField
-              label="Weapon Categories (Not Yet Implemented)"
-              tooltip="Reserved for future use. Weapon category filtering is not yet supported by the mod."
-              items={objective.weaponCategories || []}
-              placeholder="e.g. AssaultRifle"
-              onAdd={v => addToList('weaponCategories', v)}
-              onRemove={i => removeFromList('weaponCategories', i)}
-              onChangeItem={(i, v) => updateListItem('weaponCategories', i, v)}
-            />
-          )}
-
           {/* Body parts */}
           {isKill && (
             <StringListField
@@ -934,16 +921,14 @@ function AdvancedConditions({ objective, onChange }: {
             />
           )}
 
-          {/* Survive after kill (not yet implemented) */}
-          {isKill && (
-            <label className="flex items-center gap-2 text-sm text-tarkov-text-dim cursor-pointer">
-              <input type="checkbox" className="accent-tarkov-accent"
-                checked={objective.surviveAfterKill || false}
-                onChange={e => onChange({ surviveAfterKill: e.target.checked || undefined })}
-                disabled />
-              <span>Survive and extract after kills (Not Yet Implemented)</span>
-            </label>
-          )}
+          {/* One Session Only */}
+          <label className="flex items-center gap-2 text-sm text-tarkov-text-dim cursor-pointer">
+            <input type="checkbox" className="accent-tarkov-accent"
+              checked={objective.oneSessionOnly || false}
+              onChange={e => onChange({ oneSessionOnly: e.target.checked || undefined })}
+            />
+            <span>Must be completed in a single raid (progress resets between sessions)</span>
+          </label>
 
           {/* Required extract */}
           {isLocation && (

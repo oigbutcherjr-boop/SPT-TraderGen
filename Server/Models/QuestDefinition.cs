@@ -134,10 +134,6 @@ public class QuestObjective
     [JsonPropertyName("weaponTpls")]
     public List<string>? WeaponTpls { get; set; }
 
-    // Weapon categories (e.g. "AssaultRifle", "SMG"). NOT YET IMPLEMENTED — reserved for future use.
-    [JsonPropertyName("weaponCategories")]
-    public List<string>? WeaponCategories { get; set; }
-
     // Item template IDs the player must be wearing when making the kill.
     [JsonPropertyName("wearing")]
     public List<string>? Wearing { get; set; }
@@ -158,15 +154,15 @@ public class QuestObjective
     [JsonPropertyName("bodyPart")]
     public List<string>? BodyPart { get; set; }
 
-    // If true, the player must survive and extract after completing kills.
-    // NOT YET IMPLEMENTED — add a separate survive/extract objective instead.
-    [JsonPropertyName("surviveAfterKill")]
-    public bool? SurviveAfterKill { get; set; }
-
     // Required extract name for survive/extract objectives (e.g. "Factory gate 0").
     // For kill objectives this has no effect.
     [JsonPropertyName("requiredExtract")]
     public string? RequiredExtract { get; set; }
+
+    // If true, objective progress resets between raid sessions.
+    // Use for "kill X in one raid" style objectives. Default false.
+    [JsonPropertyName("oneSessionOnly")]
+    public bool OneSessionOnly { get; set; } = false;
 }
 
 // Rewards given when the quest is completed successfully.
@@ -304,9 +300,6 @@ public class RotatingObjectiveTemplate
     [JsonPropertyName("weaponTpls")]
     public List<string>? WeaponTpls { get; set; }
 
-    [JsonPropertyName("weaponCategories")]
-    public List<string>? WeaponCategories { get; set; }
-
     [JsonPropertyName("wearing")]
     public List<string>? Wearing { get; set; }
 
@@ -322,11 +315,11 @@ public class RotatingObjectiveTemplate
     [JsonPropertyName("bodyPart")]
     public List<string>? BodyPart { get; set; }
 
-    [JsonPropertyName("surviveAfterKill")]
-    public bool? SurviveAfterKill { get; set; }
-
     [JsonPropertyName("requiredExtract")]
     public string? RequiredExtract { get; set; }
+
+    [JsonPropertyName("oneSessionOnly")]
+    public bool OneSessionOnly { get; set; } = false;
 }
 
 // How rewards scale based on the generated objective values.
