@@ -28,5 +28,6 @@ The following features are planned for future updates:
 - Progress that resets if raid conditions are not met (TESTING)
 
 ## Trader Additions/Changes
-- Ability to add and modify advanced items (custom weapon builds etc.)
+- Ability to add and modify advanced items (custom weapon builds - armour with plates etc.) (DONE)
+- Ability to state item whitelist/blacklist for buying/selling
 
