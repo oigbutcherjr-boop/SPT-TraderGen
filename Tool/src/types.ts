@@ -34,6 +34,12 @@ export interface LoyaltyLevel {
   buyPriceCoef: number
 }
 
+export interface AssortChildItem {
+  itemTpl: string
+  slotId: string
+  children?: AssortChildItem[]
+}
+
 export interface AssortItem {
   itemTpl: string
   loyaltyLevel: number
@@ -43,6 +49,7 @@ export interface AssortItem {
   currency?: string
   barter?: BarterRequirement[]
   buyLimit: number
+  children?: AssortChildItem[]
 }
 
 export interface BarterRequirement {
@@ -243,7 +250,12 @@ export function createDefaultAssortItem(): AssortItem {
     currency: undefined,
     barter: undefined,
     buyLimit: 0,
+    children: undefined,
   }
+}
+
+export function createDefaultAssortChild(): AssortChildItem {
+  return { itemTpl: '', slotId: '' }
 }
 
 export function createDefaultBarter(): BarterRequirement {

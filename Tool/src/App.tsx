@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import {
   Store, Plus, Trash2, Download, AlertCircle, CheckCircle,
   ChevronDown, ChevronUp, Copy, RefreshCw, Eye, Package,
@@ -7,11 +7,11 @@ import {
 import JSZip from 'jszip'
 import { saveAs } from 'file-saver'
 import type {
-  TraderDefinition, AssortItem, LoyaltyLevel, BarterRequirement, ValidationError,
+  TraderDefinition, AssortItem, AssortChildItem, LoyaltyLevel, BarterRequirement, ValidationError,
   QuestPackDefinition,
 } from './types'
 import {
-  createDefaultTrader, createDefaultAssortItem, createDefaultBarter, generateMongoId,
+  createDefaultTrader, createDefaultAssortItem, createDefaultBarter, createDefaultAssortChild, generateMongoId,
   createDefaultQuestPack,
 } from './types'
 import { validateTrader, buildExportJson, validateQuestPack, buildQuestExportJson } from './validation'
@@ -358,6 +358,80 @@ export default function App() {
     }))
   }, [])
 
+  // Immutably clone a child tree and apply an updater at the given path.
+  // path is an array of child indices: [0, 2, 1] = children[0].children[2].children[1]
+  function produceChildUpdate(
+    item: import('./types').AssortItem,
+    path: number[],
+    updater: (node: import('./types').AssortChildItem) => import('./types').AssortChildItem
+  ): import('./types').AssortItem {
+    if (path.length === 0) return item
+    const newChildren = [...(item.children || [])]
+    let current: import('./types').AssortChildItem[] = newChildren
+    for (let depth = 0; depth < path.length - 1; depth++) {
+      const idx = path[depth]
+      const node = current[idx]
+      const next = [...(node.children || [])]
+      current[idx] = { ...node, children: next }
+      current = next
+    }
+    const lastIdx = path[path.length - 1]
+    current[lastIdx] = updater(current[lastIdx])
+    return { ...item, children: newChildren }
+  }
+
+  const addChild = useCallback((assortIndex: number, path: number[] = []) => {
+    setTrader(prev => ({
+      ...prev,
+      assort: prev.assort.map((item, i) => {
+        if (i !== assortIndex) return item
+        if (path.length === 0) {
+          return { ...item, children: [...(item.children || []), createDefaultAssortChild()] }
+        }
+        return produceChildUpdate(item, path, node => ({
+          ...node,
+          children: [...(node.children || []), createDefaultAssortChild()],
+        }))
+      }),
+    }))
+  }, [])
+
+  const removeChild = useCallback((assortIndex: number, path: number[]) => {
+    setTrader(prev => ({
+      ...prev,
+      assort: prev.assort.map((item, i) => {
+        if (i !== assortIndex) return item
+        if (path.length === 1) {
+          return { ...item, children: (item.children || []).filter((_, j) => j !== path[0]) }
+        }
+        const parentPath = path.slice(0, -1)
+        const index = path[path.length - 1]
+        return produceChildUpdate(item, parentPath, node => ({
+          ...node,
+          children: (node.children || []).filter((_, j) => j !== index),
+        }))
+      }),
+    }))
+  }, [])
+
+  const updateChild = useCallback((assortIndex: number, path: number[], key: keyof AssortChildItem, value: unknown) => {
+    setTrader(prev => ({
+      ...prev,
+      assort: prev.assort.map((item, i) => {
+        if (i !== assortIndex) return item
+        if (path.length === 1) {
+          return {
+            ...item,
+            children: (item.children || []).map((c, j) =>
+              j === path[0] ? { ...c, [key]: value } : c
+            ),
+          }
+        }
+        return produceChildUpdate(item, path, node => ({ ...node, [key]: value }))
+      }),
+    }))
+  }, [])
+
   const errorsByField = (field: string) => errors.filter(e => e.field === field)
   const hasError = (field: string) => errors.some(e => e.field === field)
 
@@ -481,6 +555,9 @@ export default function App() {
             onAddBarter={addBarter}
             onRemoveBarter={removeBarter}
             onUpdateBarter={updateBarter}
+            onAddChild={addChild}
+            onRemoveChild={removeChild}
+            onUpdateChild={updateChild}
             errors={errors}
           />
         )}
@@ -737,7 +814,8 @@ function LoyaltyTab({ levels, onAdd, onRemove, onUpdate }: {
 
 /* ===== ASSORT TAB ===== */
 function AssortTab({ assort, loyaltyLevels, defaultCurrency, expanded, onToggle,
-  onAdd, onRemove, onUpdate, onAddBarter, onRemoveBarter, onUpdateBarter, errors }: {
+  onAdd, onRemove, onUpdate, onAddBarter, onRemoveBarter, onUpdateBarter,
+  onAddChild, onRemoveChild, onUpdateChild, errors }: {
   assort: AssortItem[]
   loyaltyLevels: LoyaltyLevel[]
   defaultCurrency: string
@@ -749,6 +827,9 @@ function AssortTab({ assort, loyaltyLevels, defaultCurrency, expanded, onToggle,
   onAddBarter: (i: number) => void
   onRemoveBarter: (ai: number, bi: number) => void
   onUpdateBarter: (ai: number, bi: number, key: keyof BarterRequirement, value: unknown) => void
+  onAddChild: (i: number, path?: number[]) => void
+  onRemoveChild: (ai: number, path: number[]) => void
+  onUpdateChild: (ai: number, path: number[], key: keyof AssortChildItem, value: unknown) => void
   errors: ValidationError[]
 }) {
   const itemIds = assort.map(a => a.itemTpl).filter(id => id.length === 24)
@@ -934,6 +1015,23 @@ function AssortTab({ assort, loyaltyLevels, defaultCurrency, expanded, onToggle,
                     )}
                   </div>
 
+                  {/* Child Items (plates, attachments, weapon parts) */}
+                  <div className="bg-tarkov-bg rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="text-sm font-semibold text-tarkov-text-dim">Child Items / Attachments</h4>
+                      <button onClick={() => onAddChild(i, [])} className="text-xs btn-secondary flex items-center gap-1">
+                        <Plus size={12} /> Add Attachment
+                      </button>
+                    </div>
+                    <ChildItemTree
+                      children={item.children || []}
+                      path={[]}
+                      onAdd={(path) => onAddChild(i, path)}
+                      onRemove={(path) => onRemoveChild(i, path)}
+                      onUpdate={(path, key, value) => onUpdateChild(i, path, key, value)}
+                    />
+                  </div>
+
                   {itemErrors.length > 0 && (
                     <div className="text-sm text-tarkov-error space-y-1">
                       {itemErrors.map((e, ei) => (
@@ -961,6 +1059,79 @@ function AssortTab({ assort, loyaltyLevels, defaultCurrency, expanded, onToggle,
           </button>
         </div>
       )}
+    </div>
+  )
+}
+
+// Recursive component for rendering nested child items in the assort editor.
+function ChildItemTree({
+  children,
+  path,
+  onAdd,
+  onRemove,
+  onUpdate,
+}: {
+  children: import('./types').AssortChildItem[]
+  path: number[]
+  onAdd: (path: number[]) => void
+  onRemove: (path: number[]) => void
+  onUpdate: (path: number[], key: keyof import('./types').AssortChildItem, value: unknown) => void
+}) {
+  if (children.length === 0 && path.length === 0) {
+    return <p className="text-xs text-tarkov-text-dim">No child items. Add plates, helmet attachments, weapon parts, etc.</p>
+  }
+
+  return (
+    <div className="space-y-1">
+      {children.map((child, ci) => {
+        const childPath = [...path, ci]
+        const depth = path.length
+        return (
+          <div key={ci}>
+            <div className="flex items-end gap-2" style={{ marginLeft: `${depth * 16}px` }}>
+              <div className="flex-1">
+                {depth > 0 && <div className="h-px bg-tarkov-border/50 mb-1" />}
+                <label className="label text-[11px]">Item Template ID {depth > 0 ? `(nested lvl ${depth})` : ''}</label>
+                <input className="input-field font-mono text-sm" value={child.itemTpl}
+                  onChange={e => onUpdate(childPath, 'itemTpl', e.target.value)}
+                  placeholder="24-char hex ID" maxLength={24} />
+              </div>
+              <div className="w-44 relative">
+                <label className="label text-[11px]">Slot ID</label>
+                <div className="flex gap-1">
+                  <input className="input-field text-sm flex-1" value={child.slotId}
+                    onChange={e => onUpdate(childPath, 'slotId', e.target.value)}
+                    placeholder="e.g. Front_plate" />
+                  <SlotPicker onSelect={slotId => onUpdate(childPath, 'slotId', slotId)} />
+                </div>
+              </div>
+              <button onClick={() => onRemove(childPath)}
+                className="text-tarkov-error hover:text-tarkov-error/80 mb-2">
+                <Trash2 size={14} />
+              </button>
+            </div>
+
+            {/* Nested children */}
+            {child.children && child.children.length > 0 && (
+              <ChildItemTree
+                children={child.children}
+                path={childPath}
+                onAdd={onAdd}
+                onRemove={onRemove}
+                onUpdate={onUpdate}
+              />
+            )}
+
+            {/* Add sub-item button */}
+            <div style={{ marginLeft: `${(depth + 1) * 16}px` }}>
+              <button onClick={() => onAdd(childPath)}
+                className="text-[11px] text-tarkov-accent hover:text-tarkov-accent-hover flex items-center gap-1 mt-1 mb-2">
+                <Plus size={10} /> Add sub-item
+              </button>
+            </div>
+          </div>
+        )
+      })}
     </div>
   )
 }
@@ -1085,6 +1256,56 @@ function FieldErrors({ errors }: { errors: ValidationError[] }) {
           <AlertCircle size={10} /> {e.message}
         </p>
       ))}
+    </div>
+  )
+}
+
+const SLOTS_BY_CATEGORY: Record<string, string[]> = {
+  'Weapon': ['mod_pistol_grip', 'mod_stock', 'mod_magazine', 'mod_muzzle', 'mod_reciever', 'mod_sight_rear', 'mod_sight_front', 'mod_gas_block', 'mod_handguard', 'mod_foregrip', 'mod_scope', 'mod_tactical', 'mod_bipod', 'mod_launcher', 'mod_nvg', 'mod_mount', 'mod_charge'],
+  'Armour': ['Front_plate', 'Back_plate', 'Left_plate', 'Right_plate', 'Soft_armor_front', 'Soft_armor_back', 'Soft_armor_left', 'Soft_armor_right', 'Groin', 'Groin_back'],
+  'Helmet': ['Helmet_top', 'Helmet_back', 'Helmet_ears', 'Helmet_visor'],
+  'Gear': ['Pockets', 'SecuredContainer', 'Vest', 'Backpack', 'FaceCover', 'Eyewear', 'Earpiece', 'Headwear'],
+  'Magazine': ['cartridges'],
+  'Other': ['hideout', 'Foldable', 'Togglable'],
+}
+
+function SlotPicker({ onSelect }: { onSelect: (slotId: string) => void }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    if (open) document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [open])
+
+  return (
+    <div ref={ref} className="relative">
+      <button onClick={() => setOpen(!open)}
+        className="px-2 py-1.5 text-xs btn-secondary flex items-center gap-1 h-[38px] whitespace-nowrap"
+        title="Pick a slot name">
+        <ChevronDown size={12} />
+      </button>
+      {open && (
+        <div className="absolute right-0 top-full mt-1 w-72 max-h-96 overflow-y-auto bg-tarkov-surface border border-tarkov-border rounded-lg shadow-xl z-50 p-2">
+          <div className="text-xs text-tarkov-text-dim px-2 py-1">Click a slot to fill it in</div>
+          {Object.entries(SLOTS_BY_CATEGORY).map(([cat, slots]) => (
+            <div key={cat} className="mb-2">
+              <div className="text-xs font-semibold text-tarkov-accent px-2 py-1">{cat}</div>
+              <div className="grid grid-cols-2 gap-1">
+                {slots.map(s => (
+                  <button key={s} onClick={() => { onSelect(s); setOpen(false) }}
+                    className="text-xs text-left px-2 py-1 rounded hover:bg-tarkov-accent/20 text-tarkov-text transition-colors truncate">
+                    {s}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

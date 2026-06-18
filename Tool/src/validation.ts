@@ -78,9 +78,33 @@ export function validateTrader(trader: TraderDefinition): ValidationError[] {
         }
       }
     }
+
+    validateChildren(item.children, errors, prefix, 'children')
   }
 
   return errors
+}
+
+function validateChildren(
+  children: import('./types').AssortChildItem[] | undefined,
+  errors: ValidationError[],
+  prefix: string,
+  path: string
+) {
+  if (!children || children.length === 0) return
+  for (let j = 0; j < children.length; j++) {
+    const c = children[j]
+    const childPrefix = `${prefix}.${path}.${j}`
+    if (!c.itemTpl || !HEX_24.test(c.itemTpl)) {
+      errors.push({ field: `${childPrefix}.itemTpl`, message: `${childPrefix}: itemTpl must be 24-char hex.` })
+    }
+    if (!c.slotId || c.slotId.trim().length === 0) {
+      errors.push({ field: `${childPrefix}.slotId`, message: `${childPrefix}: slotId is required.` })
+    }
+    if (c.children && c.children.length > 0) {
+      validateChildren(c.children, errors, childPrefix, 'children')
+    }
+  }
 }
 
 export function buildExportJson(trader: TraderDefinition): object {
@@ -119,6 +143,7 @@ export function buildExportJson(trader: TraderDefinition): object {
         if (item.currency) out.currency = item.currency
       }
       if (item.buyLimit > 0) out.buyLimit = item.buyLimit
+      if (item.children && item.children.length > 0) out.children = item.children
       return out
     }),
   }

@@ -76,6 +76,11 @@ public class TraderDefinition
     [JsonPropertyName("buyCategories")]
     public List<string>? BuyCategories { get; set; }
 
+    // Item category IDs the trader is allowed to sell.
+    // If empty, a default set covering weapons, armour, ammo, gear, etc. is used.
+    [JsonPropertyName("sellCategories")]
+    public List<string>? SellCategories { get; set; }
+
     // Item template IDs that the trader will NOT buy.
     [JsonPropertyName("buyProhibitedItems")]
     public List<string>? BuyProhibitedItems { get; set; }
@@ -171,6 +176,33 @@ public class AssortItemDefinition
     // Maximum number a player can buy per restock (0 = no limit).
     [JsonPropertyName("buyLimit")]
     public int BuyLimit { get; set; } = 0;
+
+    // Child items attached to this root item (e.g. armour plates, helmet attachments,
+    // weapon parts). Each child sits in a specific slot on the parent.
+    [JsonPropertyName("children")]
+    public List<AssortChildItem>? Children { get; set; }
+}
+
+// A child item attached to an assort root item or another child item.
+// Supports arbitrary nesting (e.g. foregrip on handguard on gas block on weapon).
+public class AssortChildItem
+{
+    // Item template ID (24-char hex).
+    [JsonPropertyName("itemTpl")]
+    public string ItemTpl { get; set; } = string.Empty;
+
+    // Slot on the parent this child occupies (e.g. "Front_plate", "mod_handguard").
+    [JsonPropertyName("slotId")]
+    public string SlotId { get; set; } = string.Empty;
+
+    // Optional fixed item ID. If omitted, one is auto-generated.
+    [JsonPropertyName("itemId")]
+    public string? ItemId { get; set; }
+
+    // Sub-items attached to this child (e.g. foregrip on handguard).
+    // If empty, this is a leaf node.
+    [JsonPropertyName("children")]
+    public List<AssortChildItem>? Children { get; set; }
 }
 
 // A single barter ingredient requirement.

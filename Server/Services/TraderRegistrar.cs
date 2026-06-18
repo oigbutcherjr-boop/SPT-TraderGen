@@ -151,7 +151,43 @@ public class TraderRegistrar(
                 excluded_id_list = Array.Empty<string>(),
                 quality = "2",
             },
-            sell_category = Array.Empty<string>(),
+            sell_category = trader.SellCategories?.Count > 0
+                ? trader.SellCategories
+                :
+                [
+                    // Handbook category IDs (used by SPT client to filter trader items)
+                    "5b47574386f77428ca22b33e", // Barter / Loot
+                    "5b47574386f77428ca22b33f", // Gear (armour, rigs, helmets, backpacks, etc.)
+                    "5b47574386f77428ca22b346", // Ammo
+                    "5b47574386f77428ca22b345", // Special equipment
+                    "5b47574386f77428ca22b343", // Maps
+                    "5b5f71b386f774093f2ecf11", // Weapons – assault rifles
+                    "5b5f71c186f77409407a7ec0", // Weapons – assault carbines
+                    "5b5f71de86f774093f2ecf13", // Weapons – machine guns
+                    "5b5f724186f77447ed5636ad", // Weapons – SMGs
+                    "5b5f736886f774094242f193", // Weapons – shotguns
+                    "5b5f73ec86f774093e6cb4fd", // Weapons – pistols
+                    "5b5f74cc86f77447ec5d770a", // Weapons – marksman rifles
+                    "5b5f750686f774093e6cb503", // Weapons – sniper rifles
+                    "5b5f751486f77447ec5d770c", // Weapons – grenade launchers
+                    "5b5f752e86f774093e6cb505", // Weapons – special weapons
+                    "5b5f754a86f774094242f19b", // Weapons – melee
+                    "5b5f755f86f77447ec5d770e", // Weapons – throwables
+                    "5b5f757486f774093e6cb507", // Weapon mods – functional
+                    "5b5f75b986f77447ec5d7710", // Weapon mods – gear mods
+                    "5b5f75c686f774094242f19f", // Weapon mods – muzzle
+                    "5b5f75e486f77447ec5d7712", // Weapon mods – sights
+                    "5b5f760586f774093e6cb509", // Weapon mods – magazine
+                    "5b5f761f86f774094242f1a1", // Weapon mods – stock
+                    "575146b724597720a27126d5", // Weapon mods – barrel
+                    "635a758bfefc88a93f021b8a", // Weapon mods – handguard
+                    "55d45d3f4bdc2d972f8b456c", // Weapon mods – mount
+                    "5b363dd25acfc4001a598fd2", // Weapon mods – charging handle
+                    "5d1b36a186f7742523398433", // Weapon mods – launcher
+                    "59e3577886f774176a362503", // Weapon mods – bipod
+                    "5d6e67fba4b9361bc73bc779", // Weapon mods – foregrip
+                    "5b5f764186f77447ec5d7714", // Weapon mods – tactical
+                ],
             sell_modifier_for_prohibited_items = 0,
             surname = trader.LastName,
             transferableItems = new
@@ -319,6 +355,12 @@ public class TraderRegistrar(
 
                 traderData.Assort.Items.Add(item);
 
+                // Recursively flatten child tree into flat item list
+                if (assortItem.Children is { Count: > 0 })
+                {
+                    FlattenChildren(assortItem.Children, itemId, traderData.Assort.Items);
+                }
+
                 // Build barter scheme
                 var barterSchemeList = BuildBarterScheme(assortItem, trader.Currency);
                 traderData.Assort.BarterScheme[itemId] = barterSchemeList;
@@ -366,5 +408,28 @@ public class TraderRegistrar(
 
         // SPT expects List<List<BarterScheme>>
         return [schemeItems];
+    }
+
+    // Recursively walk a tree of AssortChildItem and flatten into a flat SPT Item list.
+    // Each child's parentId is set to the ID of the item it attaches to.
+    private void FlattenChildren(List<AssortChildItem> children, string parentId, List<Item> items)
+    {
+        foreach (var child in children)
+        {
+            var childId = child.ItemId ?? new MongoId().ToString();
+            items.Add(new Item
+            {
+                Id = childId,
+                Template = child.ItemTpl,
+                ParentId = parentId,
+                SlotId = child.SlotId,
+                Upd = new Upd(),
+            });
+
+            if (child.Children is { Count: > 0 })
+            {
+                FlattenChildren(child.Children, childId, items);
+            }
+        }
     }
 }
