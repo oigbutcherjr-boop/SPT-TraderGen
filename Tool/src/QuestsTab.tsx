@@ -15,6 +15,23 @@ import {
   MAP_LOCATIONS, OBJECTIVE_TYPES, ENEMY_TARGETS, ROTATION_TYPES,
 } from './types'
 
+// Extract names by map location (from SPT database allExtracts.json files).
+// Shown in the Required Extract dropdown for survive/extract objectives.
+const EXTRACTS_BY_LOCATION: Record<string, string[]> = {
+  bigmap: ['ZB-1011', 'Crossroads', 'Old Gas Station', 'Trailer Park', 'RUAF Roadblock', 'Dorms V-Ex', 'EXFIL_ZB013', 'customs_sniper_exit', 'Custom_scav_pmc'],
+  factory4: ['Cellars', 'Gate 3', 'Gate 0', 'Gate m', 'Gate_o'],
+  factory4_day: ['Cellars', 'Gate 3', 'Gate 0', 'Gate m', 'Gate_o'],
+  factory4_night: ['Cellars', 'Gate 3', 'Gate 0', 'Gate m', 'Gate_o'],
+  Woods: ['RUAF Gate', 'ZB-016', 'ZB-014', 'UN Roadblock', 'South V-Ex', 'Outskirts', 'un-sec', 'wood_sniper_exit', 'Factory Gate'],
+  Shoreline: ['Road to Customs', 'Shorl_V-Ex', 'Road_at_railbridge', 'Tunnel', 'Lighthouse_pass', 'Smugglers_Trail_coop', 'Pier Boat', 'Rock Passage'],
+  Interchange: ['SE Exfil', 'NW Exfil', 'PP Exfil', 'Hole Exfill', 'Saferoom Exfil', 'Interchange Cooperation'],
+  Reserve: ['EXFIL_Train', 'EXFIL_Bunker_D2', 'EXFIL_Bunker', 'Alpinist', 'EXFIL_ScavCooperation', 'EXFIL_vent', 'Exit1', 'Exit2', 'Exit3', 'Exit4'],
+  Lighthouse: ['EXFIL_Train', ' V-Ex_light'],
+  laboratory: ['lab_Elevator_Cargo', 'lab_Elevator_Main', 'lab_Vent', 'lab_Elevator_Med', 'lab_Under_Storage_Collector', 'lab_Parking_Gate', 'lab_Hangar_Gate'],
+  TarkovStreets: ['E8_yard', 'E7_car', 'E9_sgr', 'E5_5'],
+  Sandbox: ['Sandbox_VExit', 'Unity_free_exit', 'Scav_coop_exit', 'Nakatani_stairs_free_exit', 'Sniper_exit'],
+}
+
 // Returns true if an objective location matches (or is compatible with) the quest location.
 // Only the composite 'factory4' quest location covers both day and night objectives.
 function locationsMatch(objLocation: string, questLocation: string): boolean {
@@ -26,7 +43,7 @@ function locationsMatch(objLocation: string, questLocation: string): boolean {
 // ==================== Shared sub-components ====================
 
 function Field({ label, error, tooltip, children }: {
-  label: string; error?: boolean; tooltip?: string; children: React.ReactNode
+  label: React.ReactNode; error?: boolean; tooltip?: string; children: React.ReactNode
 }) {
   return (
     <div>
@@ -788,6 +805,7 @@ function AdvancedConditions({ objective, onChange }: {
   onChange: (updates: Partial<QuestObjective>) => void
 }) {
   const [open, setOpen] = useState(false)
+  const [customExtract, setCustomExtract] = useState(false)
   const isKill = objective.type === 'kill_enemy'
   const isLocation = objective.type === 'survive_location' || objective.type === 'extract_location'
   if (!isKill && !isLocation) return null
@@ -813,6 +831,10 @@ function AdvancedConditions({ objective, onChange }: {
     const n = Number(v)
     return v === '' ? null : (Number.isFinite(n) && n >= 0 ? n : null)
   }
+
+  const availableExtracts = objective.location ? (EXTRACTS_BY_LOCATION[objective.location] || []) : []
+  const currentExtract = objective.requiredExtract || ''
+  const isCustom = customExtract || (currentExtract !== '' && !availableExtracts.includes(currentExtract))
 
   return (
     <div className="border border-tarkov-border/40 rounded-lg">
@@ -932,11 +954,48 @@ function AdvancedConditions({ objective, onChange }: {
 
           {/* Required extract */}
           {isLocation && (
-            <Field label="Required Extract" tooltip="Specific extract point name. Leave blank for any extract.">
-              <input className="input-field text-sm" value={objective.requiredExtract || ''}
-                onChange={e => onChange({ requiredExtract: e.target.value || undefined })}
-                placeholder="e.g. Factory gate 0" />
-            </Field>
+            <div className="space-y-2">
+              <Field label={<>Required Extract <span className="text-tarkov-error text-[11px] font-normal">(not in latest release yet)</span></>} tooltip="Specific extract point name. Leave blank for any extract.">
+                {availableExtracts.length > 0 ? (
+                  <div className="flex gap-2">
+                    <select
+                      className="input-field text-sm flex-1"
+                      value={isCustom ? '__other__' : (objective.requiredExtract || '')}
+                      onChange={e => {
+                        const val = e.target.value
+                        if (val === '__other__') {
+                          setCustomExtract(true)
+                        } else if (val === '') {
+                          setCustomExtract(false)
+                          onChange({ requiredExtract: undefined })
+                        } else {
+                          setCustomExtract(false)
+                          onChange({ requiredExtract: val })
+                        }
+                      }}
+                    >
+                      <option value="">Any Extract</option>
+                      {availableExtracts.map(name => (
+                        <option key={name} value={name}>{name}</option>
+                      ))}
+                      <option value="__other__">Other (custom)...</option>
+                    </select>
+                  </div>
+                ) : (
+                  <input className="input-field text-sm" value={objective.requiredExtract || ''}
+                    onChange={e => onChange({ requiredExtract: e.target.value || undefined })}
+                    placeholder="e.g. Factory gate 0" />
+                )}
+              </Field>
+              {isCustom && (
+                <input
+                  className="input-field text-sm"
+                  value={objective.requiredExtract || ''}
+                  onChange={e => onChange({ requiredExtract: e.target.value || undefined })}
+                  placeholder="Enter custom extract name"
+                />
+              )}
+            </div>
           )}
         </div>
       )}
