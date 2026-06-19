@@ -63,7 +63,7 @@ The TraderGen client plugin includes an in-game export button that lets you copy
 - Go to builds and make the weapon build you desire
 - When done, use the menu at the top left and click `EXPORT TO TG`
 
-<img width="169" height="260" alt="image" src="https://github.com/user-attachments/assets/47da192d-336e-4a87-9224-9f6a169fdcd1" />
+<img width="169" height="260" alt="image" src="https://github.com/user-attachments/assets/47da092d-336e-4a87-9224-9f6a169fdcd1" />
 
 - If exporting armour/rigs/helmets/containers etc, make the kit you want in your stash, right click it and hit `EXPORT TO TG`
 
