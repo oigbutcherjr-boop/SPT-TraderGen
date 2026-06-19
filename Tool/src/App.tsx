@@ -864,7 +864,7 @@ function BuyCategoriesEditor({ categories, onChange }: {
   return (
     <div className="space-y-3">
       {/* Selected category chips */}
-      {categories.length > 0 && (
+      {categories.length > 0 ? (
         <div className="flex flex-wrap gap-2">
           {categories.map(id => (
             <div key={id} className="flex items-center gap-1 bg-tarkov-accent/10 border border-tarkov-accent/30 text-tarkov-text text-sm px-2 py-1 rounded">
@@ -874,6 +874,10 @@ function BuyCategoriesEditor({ categories, onChange }: {
               </button>
             </div>
           ))}
+        </div>
+      ) : (
+        <div className="text-sm text-tarkov-text-dim italic">
+          All default categories enabled. Add specific categories below to restrict what this trader buys.
         </div>
       )}
 

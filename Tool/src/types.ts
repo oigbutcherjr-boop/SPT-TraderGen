@@ -289,57 +289,6 @@ export function createDefaultTrader(): TraderDefinition {
     refreshTimeMax: 7200,
     insuranceEnabled: false,
     repairEnabled: false,
-    buyCategories: [
-      '5422acb9af1c889c16000029', // Weapon
-      '5448fe124bdc2da5018b4567', // Mod
-      '5485a8684bdc2da71d8b4567', // Ammo
-      '57864c8c245977548867e7f1', // MedicalSupplies
-      '543be6674bdc2df1348b4569', // FoodDrink
-      '543be5664bdc2dd4348b4569', // Meds
-      '57864ee62459775490116fc1', // Battery
-      '5447e1d04bdc2dff2f8b4567', // Knife
-      '5795f317245977243854e041', // SimpleContainer
-      '5671435f4bdc2d96058b4569', // LockableContainer
-      '5448e53e4bdc2d60728b4567', // Backpack
-      '5448e5284bdc2dcb718b4567', // Vest
-      '57864e4c24597754843f8723', // Lubricant
-      '57864ada245977548638de91', // BuildingMaterial
-      '5447b6194bdc2d67278b4567', // MarksmanRifle
-      '5447b6094bdc2dc3278b4567', // Shotgun
-      '5447b6254bdc2dc3278b4568', // SniperRifle
-      '55818ae44bdc2dde698b456c', // OpticScope
-      '55818aeb4bdc2ddc698b456a', // SpecialScope
-      '55818add4bdc2d5b648b456f', // AssaultScope
-      '555ef6e44bdc2de9068b457e', // Barrel
-      '55818b224bdc2dde698b456f', // Mount
-      '55818a594bdc2db9688b456a', // Stock
-      '543be5f84bdc2dd4348b456a', // Equipment
-      '6759673c76e93d8eb20b2080', // Flyer
-      '5661632d4bdc2d903d8b456b', // StackableItem
-      '5447e0e74bdc2d3c308b4567', // SpecItem
-      '567849dd4bdc2d150f8b456e', // Map
-      '543be6564bdc2df4348b4568', // ThrowWeap
-      '5448eb774bdc2d0a728b4567', // BarterItem
-      '5448ecbe4bdc2d60728b4568', // Info
-      '616eb7aea207f41933308f46', // RepairKits
-      '543be5e94bdc2df1348b4568', // Key
-      '543be5cb4bdc2deb348b4568', // AmmoBox
-      '57864a66245977548f04a81f', // Electronics
-      '57864bb7245977548b3b66c2', // Tool
-      '5c164d2286f774194c5e69fa', // Keycard
-      '57864a3d24597754843f8721', // Jewelry
-      '590c745b86f7743cc433c5f2', // Other
-      '5448f3a64bdc2d60728b456a', // Stimulator
-      '5d650c3e815116009f6201d2', // Fuel
-      '5448e54d4bdc2dcc718b4568', // Armor
-      '5c99f98d86f7745c314214b3', // KeyMechanical
-      '57bef4c42459772e8d35a53b', // ArmoredEquipment
-      '5448f39d4bdc2d0a728b4568', // MedKit
-      '5448f3ac4bdc2dce718b4569', // Medical
-      '5448e8d04bdc2ddf718b4569', // Food
-      '5a341c4086f77401f2541505', // Headwear
-      '543be5dd4bdc2deb348b4569', // Money
-    ],
     loyaltyLevels: [
       { level: 1, minLevel: 1, minSalesSum: 0, minStanding: 0, buyPriceCoef: 40 },
     ],
