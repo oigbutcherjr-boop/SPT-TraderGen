@@ -336,7 +336,7 @@ public static class RepeatableQuestGenerator
                 case "survive_location":
                 case "extract_location":
                     questType = QuestTypeEnum.Exploration;
-                    availableForFinish.Add(BuildSurviveCondition(count, location));
+                    availableForFinish.Add(BuildSurviveCondition(count, location, objTemplate.RequiredExtract));
                     break;
             }
         }
@@ -464,7 +464,7 @@ public static class RepeatableQuestGenerator
         };
     }
 
-    private static QuestCondition BuildSurviveCondition(int count, string? location)
+    private static QuestCondition BuildSurviveCondition(int count, string? location, string? requiredExtract = null)
     {
         var counterConditions = new List<QuestConditionCounterCondition>
         {
@@ -489,11 +489,23 @@ public static class RepeatableQuestGenerator
             });
         }
 
+        if (!string.IsNullOrWhiteSpace(requiredExtract))
+        {
+            counterConditions.Add(new QuestConditionCounterCondition
+            {
+                Id = new MongoId(),
+                DynamicLocale = true,
+                ConditionType = "ExitName",
+                ExitName = requiredExtract,
+            });
+        }
+
         var conditionId = new MongoId();
         var locationDisplay = !string.IsNullOrWhiteSpace(location) && location != "any"
             ? LocationHelper.ToDisplayName(location)
             : "the location";
-        RepeatableQuestLocaleStore.AddCondition(conditionId.ToString(), $"Survive and extract from {locationDisplay} {count} time(s)");
+        var extractSuffix = !string.IsNullOrWhiteSpace(requiredExtract) ? $" via {requiredExtract}" : "";
+        RepeatableQuestLocaleStore.AddCondition(conditionId.ToString(), $"Survive and extract from {locationDisplay}{extractSuffix} {count} time(s)");
 
         return new QuestCondition
         {

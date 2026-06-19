@@ -1334,6 +1334,14 @@ function ChildItemTree({
           </div>
         )
       })}
+      {children.length > 0 && (
+        <div className="pt-1">
+          <button onClick={() => onAdd(path)}
+            className="text-[11px] text-tarkov-accent hover:text-tarkov-accent-hover flex items-center gap-1">
+            <Plus size={10} /> Add Attachment
+          </button>
+        </div>
+      )}
     </div>
   )
 }
@@ -1464,7 +1472,7 @@ function FieldErrors({ errors }: { errors: ValidationError[] }) {
 
 const SLOTS_BY_CATEGORY: Record<string, string[]> = {
   'Weapon': ['mod_pistol_grip', 'mod_stock', 'mod_magazine', 'mod_muzzle', 'mod_reciever', 'mod_barrel', 'mod_sight_rear', 'mod_sight_front', 'mod_gas_block', 'mod_handguard', 'mod_foregrip', 'mod_scope', 'mod_tactical', 'mod_bipod', 'mod_launcher', 'mod_nvg', 'mod_mount', 'mod_charge', 'mod_tactical_000', 'mod_flashlight', 'mod_mount_001', 'mod_stock_000'],
-  'Armour': ['Front_plate', 'Back_plate', 'Left_plate', 'Right_plate', 'Soft_armor_front', 'Soft_armor_back', 'Soft_armor_left', 'Soft_armor_right', 'Groin', 'Groin_back', 'Collar', 'Shoulder_l', 'Shoulder_r'],
+  'Armour': ['Front_plate', 'Back_plate', 'Left_plate', 'Right_plate', 'Soft_armor_front', 'Soft_armor_back', 'Soft_armor_left', 'soft_armor_right', 'Groin', 'Groin_back', 'Collar', 'Shoulder_l', 'Shoulder_r'],
   'Helmet': ['Helmet_top', 'Helmet_back', 'Helmet_ears', 'Helmet_visor'],
   'Gear': ['Pockets', 'SecuredContainer', 'Vest', 'Backpack', 'FaceCover', 'Eyewear', 'Earpiece', 'Headwear'],
   'Magazine': ['cartridges'],

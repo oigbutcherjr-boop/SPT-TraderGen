@@ -426,8 +426,21 @@ public static class QuestBuilder
             },
         };
 
+        if (!string.IsNullOrWhiteSpace(obj.RequiredExtract))
+        {
+            var exitNameCondId = DeriveStableId($"{questId}:obj{index}:exitname");
+            counterConditions.Add(new JsonObject
+            {
+                ["conditionType"] = "ExitName",
+                ["dynamicLocale"] = false,
+                ["id"] = exitNameCondId,
+                ["exitName"] = obj.RequiredExtract,
+            });
+        }
+
         var locationDisplayName = LocationHelper.ToDisplayName(obj.Location!);
-        var desc = obj.Description ?? $"Survive and extract from {locationDisplayName} {obj.Count} time(s)";
+        var extractSuffix = !string.IsNullOrWhiteSpace(obj.RequiredExtract) ? $" via {obj.RequiredExtract}" : "";
+        var desc = obj.Description ?? $"Survive and extract from {locationDisplayName}{extractSuffix} {obj.Count} time(s)";
         locales[condId] = desc;
 
         return new JsonObject
