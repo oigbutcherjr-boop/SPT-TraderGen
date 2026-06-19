@@ -604,6 +604,49 @@ public static class QuestBuilder
             });
         }
 
+        // Stash row expansion reward
+        if (rewards.StashRows > 0)
+        {
+            result.Add(new JsonObject
+            {
+                ["availableInGameEditions"] = new JsonArray(),
+                ["id"] = GenerateId(),
+                ["index"] = idx++,
+                ["type"] = "StashRows",
+                ["value"] = rewards.StashRows.ToString(),
+                ["unknown"] = false,
+            });
+        }
+
+        // Skill point rewards
+        foreach (var skill in rewards.Skills)
+        {
+            result.Add(new JsonObject
+            {
+                ["availableInGameEditions"] = new JsonArray(),
+                ["id"] = GenerateId(),
+                ["index"] = idx++,
+                ["target"] = skill.Name,
+                ["type"] = "Skill",
+                ["value"] = skill.Points.ToString(),
+                ["unknown"] = false,
+            });
+        }
+
+        // Pocket upgrade reward
+        if (!string.IsNullOrWhiteSpace(rewards.Pockets))
+        {
+            result.Add(new JsonObject
+            {
+                ["availableInGameEditions"] = new JsonArray(),
+                ["id"] = GenerateId(),
+                ["index"] = idx++,
+                ["target"] = rewards.Pockets,
+                ["type"] = "Pockets",
+                ["unknown"] = false,
+            });
+        }
+
         return result;
     }
 

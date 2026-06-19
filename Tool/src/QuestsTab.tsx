@@ -5,7 +5,8 @@ import {
   Scroll, Repeat, GripVertical, Copy, Package,
 } from 'lucide-react'
 import type {
-  QuestPackDefinition, StoryQuestDefinition, QuestObjective, QuestRewards,
+  QuestPackDefinition, StoryQuestDefinition, QuestObjective, QuestRewards, SkillReward,
+  CustomPocketDefinition, PocketSlot,
   RotatingQuestTemplate, RotatingObjectiveTemplate, ValidationError,
 } from './types'
 import { useItemNames } from './useItemNames'
@@ -31,6 +32,31 @@ const EXTRACTS_BY_LOCATION: Record<string, string[]> = {
   TarkovStreets: ['E8_yard', 'E7_car', 'E9_sgr', 'E5_5'],
   Sandbox: ['Sandbox_VExit', 'Unity_free_exit', 'Scav_coop_exit', 'Nakatani_stairs_free_exit', 'Sniper_exit'],
 }
+
+// Known pocket template IDs for pocket upgrade reward.
+const KNOWN_POCKETS: { id: string; label: string }[] = [
+  { id: '557ffd194bdc2d28148b457f', label: 'Default (1x4 / 2x2)' },
+  { id: '5af99e9186f7747c447120b8', label: 'Large (2x3)' },
+  { id: '60c7272c204bc17802313365', label: '1x3' },
+  { id: '65e080be269cbd5c5005e529', label: '+2 (Old Patterns Quest)' },
+  { id: 'aabbccdd11223344556677aa', label: 'Cross (TraderGen custom)' },
+]
+
+// Valid skill names for skill reward dropdowns.
+const VALID_SKILLS = [
+  'Endurance', 'Strength', 'Vitality', 'Health', 'StressResistance',
+  'Metabolism', 'Immunity', 'Perception', 'Intellect', 'Attention',
+  'Charisma', 'Memory', 'MagDrills', 'RecoilControl', 'CovertMovement',
+  'ProneMovement', 'FirstAid', 'FieldMedicine', 'Surgery', 'LightVests',
+  'HeavyVests', 'WeaponModding', 'AdvancedModding', 'NightOps', 'SilentOps',
+  'Lockpicking', 'Search', 'WeaponTreatment', 'Freetrading', 'Auctions',
+  'Cleanoperations', 'Barter', 'Shadowconnections', 'Taskperformance',
+  'Pistol', 'Revolver', 'SMG', 'Assault', 'Shotgun', 'Sniper', 'LMG',
+  'DMR', 'Melee', 'Throwing', 'DrawMaster', 'AimMaster', 'Sniping',
+  'TroubleShooting', 'HideoutManagement', 'Crafting',
+  'BearAssaultoperations', 'BearAuthority', 'BearAksystems', 'BearHeavycaliber', 'BearRawpower',
+  'UsecArsystems', 'UsecDeepweaponmodding', 'UsecLongrangeoptics', 'UsecNegotiations', 'UsecTactics',
+]
 
 // Returns true if an objective location matches (or is compatible with) the quest location.
 // Only the composite 'factory4' quest location covers both day and night objectives.
@@ -587,7 +613,7 @@ function StoryQuestEditor({ quest, questIndex, allQuests, onChange, errors }: {
       {/* Rewards */}
       <div>
         <h3 className="text-sm font-semibold text-tarkov-accent flex items-center gap-2 mb-3">
-          <Star size={16} /> Rewards
+          <Star size={16} /> Rewards <span className="text-tarkov-error text-[11px] font-normal">(stash rows, skills & pockets not in latest release yet)</span>
         </h3>
         <div className="bg-tarkov-bg rounded-lg p-4 space-y-4">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -692,6 +718,108 @@ function StoryQuestEditor({ quest, questIndex, allQuests, onChange, errors }: {
               ))}
             </div>
           )}
+
+          {/* Stash Rows */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-tarkov-border/30">
+            <Field label="Stash Rows" tooltip="Number of stash rows to add on completion. Requires client restart.">
+              <input type="number" className="input-field" value={quest.rewards.stashRows || 0}
+                onChange={e => updateRewards({ stashRows: Number(e.target.value) || undefined })} min={0} />
+            </Field>
+            <Field label="Pockets" tooltip="Pocket template to upgrade to. Requires client restart.">
+              <div className="flex flex-col gap-1.5">
+                <select
+                  className="input-field text-sm"
+                  value={quest.rewards.pockets ? (KNOWN_POCKETS.some(p => p.id === quest.rewards.pockets) ? quest.rewards.pockets : '') : (quest.rewards.customPocket ? '__custom__' : '')}
+                  onChange={e => {
+                    const val = e.target.value
+                    if (val === '__custom__') {
+                      updateRewards({ pockets: undefined, customPocket: { slots: [{ width: 1, height: 2 }] } })
+                    } else if (val === '') {
+                      updateRewards({ pockets: undefined, customPocket: undefined })
+                    } else {
+                      updateRewards({ pockets: val, customPocket: undefined })
+                    }
+                  }}
+                >
+                  <option value="">No pocket upgrade</option>
+                  {KNOWN_POCKETS.map(p => (
+                    <option key={p.id} value={p.id}>{p.label}</option>
+                  ))}
+                  <option value="__custom__">Custom...</option>
+                </select>
+
+                {/* Known pocket preview */}
+                {quest.rewards.pockets && KNOWN_POCKETS.some(p => p.id === quest.rewards.pockets) && (
+                  <PocketPreview pocketId={quest.rewards.pockets} />
+                )}
+
+                {/* Custom pocket editor */}
+                {quest.rewards.customPocket && (
+                  <CustomPocketEditor
+                    definition={quest.rewards.customPocket}
+                    onChange={def => updateRewards({ customPocket: def })}
+                  />
+                )}
+              </div>
+            </Field>
+          </div>
+
+          {/* Skill Rewards */}
+          <div className="pt-2 border-t border-tarkov-border/30">
+            <div className="flex items-center gap-3 flex-wrap mb-2">
+              <button
+                onClick={() => {
+                  const newSkills = [...(quest.rewards.skills || []), { name: 'Endurance', points: 100 }]
+                  updateRewards({ skills: newSkills })
+                }}
+                className="btn-secondary text-xs flex items-center gap-1 px-2 py-1"
+              >
+                <Plus size={12} /> Add Skill Reward
+              </button>
+              <span className="text-xs text-tarkov-text-dim">100 points = +1 skill level</span>
+            </div>
+            {(quest.rewards.skills || []).length > 0 && (
+              <div className="space-y-1">
+                {(quest.rewards.skills || []).map((skill, idx) => (
+                  <div key={idx} className="flex items-center gap-2 bg-tarkov-bg rounded p-1.5 border border-tarkov-border/50">
+                    <select
+                      className="input-field text-sm flex-1"
+                      value={skill.name}
+                      onChange={e => {
+                        const newSkills = [...(quest.rewards.skills || [])]
+                        newSkills[idx] = { ...skill, name: e.target.value }
+                        updateRewards({ skills: newSkills })
+                      }}
+                    >
+                      {VALID_SKILLS.map(s => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                    <div className="w-28">
+                      <input
+                        type="number"
+                        min="1"
+                        className="input-field text-sm w-full text-center"
+                        value={skill.points}
+                        onChange={e => {
+                          const newSkills = [...(quest.rewards.skills || [])]
+                          newSkills[idx] = { ...skill, points: Number(e.target.value) || 1 }
+                          updateRewards({ skills: newSkills })
+                        }}
+                      />
+                    </div>
+                    <button
+                      onClick={() => {
+                        const newSkills = (quest.rewards.skills || []).filter((_, i) => i !== idx)
+                        updateRewards({ skills: newSkills.length ? newSkills : undefined })
+                      }}
+                      className="text-tarkov-error hover:text-tarkov-error/80 p-1"
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -1345,6 +1473,199 @@ function TooltipIcon({ text }: { text: string }) {
           {text}
         </div>
       )}
+    </div>
+  )
+}
+
+// Pocket slot data for visual previews.
+interface PocketSlotView { w: number; h: number; color: string }
+
+const POCKET_LAYOUTS: Record<string, PocketSlotView[]> = {
+  '557ffd194bdc2d28148b457f': [
+    { w: 1, h: 2, color: '#4ade80' },
+    { w: 1, h: 2, color: '#4ade80' },
+    { w: 1, h: 2, color: '#4ade80' },
+    { w: 1, h: 2, color: '#4ade80' },
+  ],
+  '5af99e9186f7747c447120b8': [
+    { w: 1, h: 2, color: '#60a5fa' },
+    { w: 1, h: 2, color: '#60a5fa' },
+    { w: 1, h: 2, color: '#60a5fa' },
+    { w: 1, h: 2, color: '#60a5fa' },
+    { w: 1, h: 2, color: '#60a5fa' },
+  ],
+  '60c7272c204bc17802313365': [
+    { w: 1, h: 3, color: '#f472b6' },
+    { w: 1, h: 3, color: '#f472b6' },
+    { w: 1, h: 3, color: '#f472b6' },
+    { w: 1, h: 3, color: '#f472b6' },
+  ],
+  '65e080be269cbd5c5005e529': [
+    { w: 1, h: 2, color: '#a78bfa' },
+    { w: 1, h: 2, color: '#a78bfa' },
+    { w: 1, h: 2, color: '#a78bfa' },
+    { w: 1, h: 2, color: '#a78bfa' },
+    { w: 1, h: 2, color: '#a78bfa' },
+    { w: 1, h: 2, color: '#a78bfa' },
+  ],
+  'aabbccdd11223344556677aa': [
+    { w: 1, h: 2, color: '#fbbf24' },
+    { w: 2, h: 1, color: '#fbbf24' },
+    { w: 2, h: 2, color: '#f97316' },
+    { w: 2, h: 1, color: '#fbbf24' },
+    { w: 1, h: 2, color: '#fbbf24' },
+  ],
+}
+
+function PocketSlotBlock({ slot }: { slot: PocketSlotView }) {
+  return (
+    <div
+      className="rounded border border-white/20 flex items-center justify-center text-[10px] font-mono text-white/90 shadow-sm"
+      style={{
+        width: `${slot.w * 28}px`,
+        height: `${slot.h * 28}px`,
+        backgroundColor: slot.color,
+      }}
+    >
+      {slot.w}×{slot.h}
+    </div>
+  )
+}
+
+function PocketPreview({ pocketId }: { pocketId?: string }) {
+  if (!pocketId) return null
+
+  const layout = POCKET_LAYOUTS[pocketId]
+  if (!layout) {
+    return (
+      <div className="mt-2 text-xs text-tarkov-text-dim italic">
+        Custom pocket — preview unavailable
+      </div>
+    )
+  }
+
+  const totalCells = layout.reduce((sum, s) => sum + s.w * s.h, 0)
+
+  // Cross layout gets a special visual arrangement
+  if (pocketId === 'aabbccdd11223344556677aa') {
+    const [top, left, center, right, bottom] = layout
+    return (
+      <div className="mt-2">
+        <div className="text-xs text-tarkov-text-dim mb-1.5">
+          {layout.length} slots · {totalCells} cells total
+        </div>
+        <div className="flex flex-col items-center gap-1">
+          <PocketSlotBlock slot={top} />
+          <div className="flex items-center gap-1">
+            <PocketSlotBlock slot={left} />
+            <PocketSlotBlock slot={center} />
+            <PocketSlotBlock slot={right} />
+          </div>
+          <PocketSlotBlock slot={bottom} />
+        </div>
+      </div>
+    )
+  }
+
+  // Default layout: slots shown in a row
+  return (
+    <div className="mt-2">
+      <div className="text-xs text-tarkov-text-dim mb-1.5">
+        {layout.length} slot(s) · {totalCells} cells total
+      </div>
+      <div className="flex flex-wrap gap-1">
+        {layout.map((slot, i) => (
+          <PocketSlotBlock key={i} slot={slot} />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function CustomPocketEditor({ definition, onChange }: {
+  definition: CustomPocketDefinition
+  onChange: (def: CustomPocketDefinition) => void
+}) {
+  const totalCells = definition.slots.reduce((sum, s) => sum + s.width * s.height, 0)
+
+  const updateSlot = (idx: number, updates: Partial<PocketSlot>) => {
+    const slots = definition.slots.map((s, i) => i === idx ? { ...s, ...updates } : s)
+    onChange({ ...definition, slots })
+  }
+
+  const removeSlot = (idx: number) => {
+    const slots = definition.slots.filter((_, i) => i !== idx)
+    if (slots.length === 0) return
+    onChange({ ...definition, slots })
+  }
+
+  const addSlot = () => {
+    onChange({ ...definition, slots: [...definition.slots, { width: 1, height: 2 }] })
+  }
+
+  return (
+    <div className="mt-2 space-y-2">
+      <div className="text-xs text-tarkov-text-dim">
+        {definition.slots.length} slot(s) · {totalCells} cells total
+      </div>
+
+      {/* Slot list */}
+      <div className="space-y-1.5">
+        {definition.slots.map((slot, idx) => (
+          <div key={idx} className="flex items-center gap-2">
+            <span className="text-xs text-tarkov-text-dim w-12">Slot {idx + 1}</span>
+            <div className="flex items-center gap-1">
+              <input
+                type="number"
+                min={1}
+                max={4}
+                className="input-field text-xs w-14 text-center py-1"
+                value={slot.width}
+                onChange={e => updateSlot(idx, { width: Math.max(1, Math.min(4, Number(e.target.value) || 1)) })}
+              />
+              <span className="text-xs text-tarkov-text-dim">×</span>
+              <input
+                type="number"
+                min={1}
+                max={4}
+                className="input-field text-xs w-14 text-center py-1"
+                value={slot.height}
+                onChange={e => updateSlot(idx, { height: Math.max(1, Math.min(4, Number(e.target.value) || 1)) })}
+              />
+            </div>
+            <button
+              onClick={() => removeSlot(idx)}
+              className="text-tarkov-error hover:text-tarkov-error/80 p-1"
+              title="Remove slot"
+            >
+              <Trash2 size={12} />
+            </button>
+          </div>
+        ))}
+      </div>
+
+      <button
+        onClick={addSlot}
+        className="btn-secondary text-xs flex items-center gap-1 px-2 py-1"
+      >
+        <Plus size={12} /> Add Slot
+      </button>
+
+      {/* Visual preview */}
+      <div className="flex flex-wrap gap-1 pt-1">
+        {definition.slots.map((slot, i) => (
+          <div
+            key={i}
+            className="rounded border border-white/20 flex items-center justify-center text-[10px] font-mono text-white/90 shadow-sm bg-tarkov-accent/80"
+            style={{
+              width: `${slot.width * 28}px`,
+              height: `${slot.height * 28}px`,
+            }}
+          >
+            {slot.width}×{slot.height}
+          </div>
+        ))}
+      </div>
     </div>
   )
 }

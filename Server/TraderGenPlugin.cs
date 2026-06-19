@@ -129,6 +129,20 @@ public class TraderGenPlugin(
                 continue;
             }
 
+            // Process custom pocket templates — generate item JSON in db/TraderGenPockets/ and replace customPocket with pockets ID
+            var pocketInjector = new CustomPocketInjector(databaseService);
+            var traderGenPocketsDir = System.IO.Path.Combine(modPath, "db", "TraderGenPockets");
+            Directory.CreateDirectory(traderGenPocketsDir);
+            foreach (var quest in questPack.Definition.StoryQuests)
+            {
+                if (quest.Rewards.CustomPocket is { Slots.Count: > 0 })
+                {
+                    var pocketId = pocketInjector.Inject(quest.Rewards.CustomPocket, traderGenPocketsDir);
+                    quest.Rewards.Pockets = pocketId;
+                    quest.Rewards.CustomPocket = null;
+                }
+            }
+
             // Collect story quests
             var storyQuests = new List<Models.StoryQuestDefinition>(questPack.Definition.StoryQuests);
 

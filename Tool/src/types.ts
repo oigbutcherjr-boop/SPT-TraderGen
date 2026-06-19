@@ -115,6 +115,24 @@ export interface QuestRewards {
   traderStanding: number
   items?: RewardItem[]
   unlockAssortItems?: string[]
+  stashRows?: number
+  skills?: SkillReward[]
+  pockets?: string
+  customPocket?: CustomPocketDefinition
+}
+
+export interface SkillReward {
+  name: string
+  points: number
+}
+
+export interface CustomPocketDefinition {
+  slots: PocketSlot[]
+}
+
+export interface PocketSlot {
+  width: number
+  height: number
 }
 
 export interface MoneyReward {

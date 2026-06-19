@@ -188,6 +188,55 @@ public class QuestRewards
     // Each entry is an assort item ID from the trader's assort list.
     [JsonPropertyName("unlockAssortItems")]
     public List<string> UnlockAssortItems { get; set; } = [];
+
+    // Number of stash rows to add on completion. Requires client restart.
+    [JsonPropertyName("stashRows")]
+    public int StashRows { get; set; } = 0;
+
+    // Skill point rewards on completion. Each entry gives skill points to a specific skill.
+    // Use skill names like "Endurance", "Strength", "Vitality", etc.
+    [JsonPropertyName("skills")]
+    public List<SkillReward> Skills { get; set; } = [];
+
+    // Pocket template ID to upgrade the player's pockets to.
+    // Common values: "557ffd194bdc2d3a0f6c6c84" (2x2), "627a4e6b8792715e648a5e36" (2x3).
+    [JsonPropertyName("pockets")]
+    public string? Pockets { get; set; }
+
+    // Custom pocket definition — the server will generate a template ID and inject it.
+    [JsonPropertyName("customPocket")]
+    public CustomPocketDefinition? CustomPocket { get; set; }
+}
+
+// Custom pocket slot definition.
+public class CustomPocketSlot
+{
+    [JsonPropertyName("width")]
+    public int Width { get; set; } = 1;
+
+    [JsonPropertyName("height")]
+    public int Height { get; set; } = 2;
+}
+
+// Custom pocket definition — used to generate a new pocket template on the fly.
+public class CustomPocketDefinition
+{
+    [JsonPropertyName("slots")]
+    public List<CustomPocketSlot> Slots { get; set; } = [];
+}
+
+// Skill point reward given on quest completion.
+public class SkillReward
+{
+    // Skill name. Use SPT skill enum values: Endurance, Strength, Vitality, Health,
+    // StressResistance, Metabolism, Immunity, Perception, Intellect, Attention, Charisma,
+    // Memory, MagDrills, RecoilControl, CovertMovement, etc.
+    [JsonPropertyName("name")]
+    public string Name { get; set; } = string.Empty;
+
+    // Points to add. In BSG, 100 points = +1 level. Use 100 for a full level.
+    [JsonPropertyName("points")]
+    public int Points { get; set; } = 100;
 }
 
 // A money reward (currency + amount).

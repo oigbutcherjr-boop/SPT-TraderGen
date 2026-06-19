@@ -20,14 +20,16 @@
     <PackageReference Include="WTT-ServerCommonLib" Version="2.0.20" />
   </ItemGroup>
 
-  <!-- Copy DLL and traders/ folder to build output for easy deployment -->
+  <!-- Copy DLL, db/, and traders/ folder to build output for easy deployment -->
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
     <MakeDir Directories="$(ProjectDir)Build\SPT\user\mods\TraderGen" />
     <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(ProjectDir)Build\SPT\user\mods\TraderGen" />
 
     <ItemGroup>
       <TraderFiles Include="$(ProjectDir)traders\**\*" />
+      <DbFiles Include="$(ProjectDir)db\**\*" />
     </ItemGroup>
     <Copy SourceFiles="@(TraderFiles)" DestinationFiles="@(TraderFiles->'$(ProjectDir)Build\SPT\user\mods\TraderGen\traders\%(RecursiveDir)%(Filename)%(Extension)')" />
+    <Copy SourceFiles="@(DbFiles)" DestinationFiles="@(DbFiles->'$(ProjectDir)Build\SPT\user\mods\TraderGen\db\%(RecursiveDir)%(Filename)%(Extension)')" />
   </Target>
 </Project>

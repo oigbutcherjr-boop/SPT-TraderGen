@@ -277,6 +277,21 @@ public static class QuestValidator
 
         if (rewards.TraderStanding < 0)
             errors.Add($"{prefix}: 'traderStanding' cannot be negative.");
+
+        if (rewards.StashRows < 0)
+            errors.Add($"{prefix}: 'stashRows' cannot be negative.");
+
+        for (var si = 0; si < rewards.Skills.Count; si++)
+        {
+            var skill = rewards.Skills[si];
+            if (string.IsNullOrWhiteSpace(skill.Name))
+                errors.Add($"{prefix}.skills[{si}]: 'name' is required.");
+            if (skill.Points < 1)
+                errors.Add($"{prefix}.skills[{si}]: 'points' must be >= 1.");
+        }
+
+        if (!string.IsNullOrWhiteSpace(rewards.Pockets) && (rewards.Pockets.Length != 24 || !IsHexString(rewards.Pockets)))
+            errors.Add($"{prefix}: 'pockets' must be a 24-character hex string. Got: '{rewards.Pockets}'");
     }
 
     private static void ValidateRotatingTemplate(

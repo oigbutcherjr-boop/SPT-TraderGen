@@ -1,0 +1,138 @@
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
+using System.Text.Json.Nodes;
+using SPTarkov.Server.Core.Models.Common;
+using SPTarkov.Server.Core.Models.Eft.Common.Tables;
+using SPTarkov.Server.Core.Services;
+using TraderGen.Models;
+
+namespace TraderGen.Services;
+
+/// <summary>
+/// Generates custom pocket templates, writes them to db/CustomItems/ as JSON files,
+/// and injects them into the SPT items database.
+/// </summary>
+public class CustomPocketInjector(DatabaseService databaseService)
+{
+    /// <summary>
+    /// A cache of already-injected pocket layouts so we don't duplicate them.
+    /// Key: deterministic hash of the slot layout. Value: generated template ID.
+    /// </summary>
+    private readonly Dictionary<string, string> _injectedLayouts = new();
+
+    /// <summary>
+    /// For a given custom pocket definition, generates a unique template ID,
+    /// clones a base pocket template with the new grids, writes it to db/CustomItems/,
+    /// injects it into the DB, and returns the ID.
+    /// </summary>
+    public string Inject(CustomPocketDefinition definition, string customItemsDir)
+    {
+        var layoutKey = ComputeLayoutKey(definition);
+
+        if (_injectedLayouts.TryGetValue(layoutKey, out var existingId))
+        {
+            return existingId;
+        }
+
+        var items = databaseService.GetTables().Templates.Items;
+
+        // Clone the default pocket template as a base
+        var baseId = new MongoId("557ffd194bdc2d28148b457f");
+        if (!items.TryGetValue(baseId, out var baseTemplate))
+        {
+            // Fallback: try another known pocket template
+            baseId = new MongoId("5af99e9186f7747c447120b8");
+            items.TryGetValue(baseId, out baseTemplate);
+        }
+
+        if (baseTemplate == null || baseTemplate.Properties == null)
+        {
+            throw new InvalidOperationException("Could not find a base pocket template in the database.");
+        }
+
+        var generatedId = GenerateId();
+
+        // Build new grids from the custom slot definition
+        var grids = new List<Grid>();
+        for (var i = 0; i < definition.Slots.Count; i++)
+        {
+            var slot = definition.Slots[i];
+            var slotId = GenerateId();
+            grids.Add(new Grid
+            {
+                Id = slotId,
+                Name = $"pocket{i + 1}",
+                Parent = generatedId,
+                Properties = new GridProperties
+                {
+                    CellsH = slot.Width,
+                    CellsV = slot.Height,
+                    Filters =
+                    [
+                        new GridFilter
+                        {
+                            Filter = [new MongoId("54009119af1c881c07000029")],
+                            ExcludedFilter = [new MongoId("5448bf274bdc2dfc2f8b456a")],
+                        },
+                    ],
+                    IsSortingTable = false,
+                    MinCount = 0,
+                    MaxCount = 0,
+                    MaxWeight = 0,
+                },
+                Prototype = "55d329c24bdc2d892f8b4567",
+            });
+        }
+
+        // Clone the base template using record copy semantics — keeps every other property intact
+        var newTemplate = baseTemplate with
+        {
+            Id = new MongoId(generatedId),
+            Name = $"TraderGen Custom Pocket {generatedId[..8]}",
+            Properties = baseTemplate.Properties with
+            {
+                Grids = grids,
+            },
+        };
+
+        // Serialize to JSON and write to db/TraderGenPockets/ for persistence
+        Directory.CreateDirectory(customItemsDir);
+        var jsonOptions = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower, WriteIndented = true };
+        var templateJson = JsonSerializer.Serialize(newTemplate, jsonOptions);
+        var templateNode = JsonNode.Parse(templateJson)!;
+        // Wrap in the items.json format: { "<id>": { ...item... } }
+        var wrapped = new JsonObject { [generatedId] = templateNode };
+        var filePath = System.IO.Path.Combine(customItemsDir, $"custom_pocket_{generatedId}.json");
+        File.WriteAllText(filePath, wrapped.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
+
+        // Also inject directly into the in-memory database
+        items[new MongoId(generatedId)] = newTemplate;
+        _injectedLayouts[layoutKey] = generatedId;
+
+        return generatedId;
+    }
+
+    /// <summary>
+    /// Computes a deterministic key for a pocket layout so identical layouts
+    /// get the same template ID (prevents duplicate templates).
+    /// </summary>
+    private static string ComputeLayoutKey(CustomPocketDefinition definition)
+    {
+        var sb = new StringBuilder();
+        foreach (var slot in definition.Slots)
+        {
+            sb.Append(slot.Width);
+            sb.Append('x');
+            sb.Append(slot.Height);
+            sb.Append(',');
+        }
+        return sb.ToString();
+    }
+
+    private static string GenerateId()
+    {
+        var bytes = RandomNumberGenerator.GetBytes(12);
+        return Convert.ToHexStringLower(bytes);
+    }
+}

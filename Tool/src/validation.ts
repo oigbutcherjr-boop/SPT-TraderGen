@@ -267,6 +267,41 @@ export function validateQuestPack(pack: QuestPackDefinition, traderId: string): 
     if (q.rewards.xp < 0) {
       errors.push({ field: `quest.${i}.rewards.xp`, message: `${prefix}: XP reward cannot be negative.` })
     }
+
+    if (q.rewards.stashRows !== undefined && q.rewards.stashRows < 0) {
+      errors.push({ field: `quest.${i}.rewards.stashRows`, message: `${prefix}: stashRows cannot be negative.` })
+    }
+
+    if (q.rewards.skills) {
+      for (let si = 0; si < q.rewards.skills.length; si++) {
+        const skill = q.rewards.skills[si]
+        if (!skill.name.trim()) {
+          errors.push({ field: `quest.${i}.rewards.skills[${si}].name`, message: `${prefix}: skill[${si}] name is required.` })
+        }
+        if (skill.points < 1) {
+          errors.push({ field: `quest.${i}.rewards.skills[${si}].points`, message: `${prefix}: skill[${si}] points must be >= 1.` })
+        }
+      }
+    }
+
+    if (q.rewards.pockets && !/^[0-9a-fA-F]{24}$/.test(q.rewards.pockets)) {
+      errors.push({ field: `quest.${i}.rewards.pockets`, message: `${prefix}: pockets must be a 24-character hex string.` })
+    }
+
+    if (q.rewards.customPocket) {
+      if (q.rewards.customPocket.slots.length === 0) {
+        errors.push({ field: `quest.${i}.rewards.customPocket`, message: `${prefix}: custom pocket must have at least one slot.` })
+      }
+      for (let pi = 0; pi < q.rewards.customPocket.slots.length; pi++) {
+        const slot = q.rewards.customPocket.slots[pi]
+        if (slot.width < 1 || slot.width > 4) {
+          errors.push({ field: `quest.${i}.rewards.customPocket.slots[${pi}].width`, message: `${prefix}: custom pocket slot[${pi}] width must be 1-4.` })
+        }
+        if (slot.height < 1 || slot.height > 4) {
+          errors.push({ field: `quest.${i}.rewards.customPocket.slots[${pi}].height`, message: `${prefix}: custom pocket slot[${pi}] height must be 1-4.` })
+        }
+      }
+    }
   }
 
   for (let i = 0; i < pack.rotatingQuests.length; i++) {
@@ -404,5 +439,9 @@ function buildRewardsJson(rewards: QuestPackDefinition['storyQuests'][0]['reward
   if (rewards.unlockAssortItems && rewards.unlockAssortItems.length > 0) {
     r.unlockAssortItems = rewards.unlockAssortItems
   }
+  if (rewards.stashRows && rewards.stashRows > 0) r.stashRows = rewards.stashRows
+  if (rewards.skills && rewards.skills.length > 0) r.skills = rewards.skills
+  if (rewards.pockets) r.pockets = rewards.pockets
+  if (rewards.customPocket) r.customPocket = rewards.customPocket
   return r
 }
