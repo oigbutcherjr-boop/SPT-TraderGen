@@ -764,6 +764,7 @@ export default function App() {
             assort={trader.assort}
             loyaltyLevels={trader.loyaltyLevels}
             defaultCurrency={trader.currency}
+            storyQuests={questPack.storyQuests}
             expanded={expandedAssort}
             onToggle={toggleAssort}
             onAdd={addAssortItem}
@@ -1129,12 +1130,13 @@ function LoyaltyTab({ levels, onAdd, onRemove, onUpdate }: {
 }
 
 /* ===== ASSORT TAB ===== */
-function AssortTab({ assort, loyaltyLevels, defaultCurrency, expanded, onToggle,
+function AssortTab({ assort, loyaltyLevels, defaultCurrency, storyQuests, expanded, onToggle,
   onAdd, onRemove, onUpdate, onAddBarter, onRemoveBarter, onUpdateBarter,
   onAddChild, onRemoveChild, onUpdateChild, onImportFromClipboard, errors }: {
   assort: AssortItem[]
   loyaltyLevels: LoyaltyLevel[]
   defaultCurrency: string
+  storyQuests: QuestPackDefinition['storyQuests']
   expanded: Set<number>
   onToggle: (i: number) => void
   onAdd: () => void
@@ -1155,6 +1157,7 @@ function AssortTab({ assort, loyaltyLevels, defaultCurrency, expanded, onToggle,
   const itemNames = useItemNames(allIds)
 
   const [searchQuery, setSearchQuery] = useState('')
+  const [otherQuestMode, setOtherQuestMode] = useState<Set<number>>(new Set())
   const filteredAssort = searchQuery.trim()
     ? assort.filter((item) => {
         const q = searchQuery.toLowerCase()
@@ -1248,6 +1251,9 @@ function AssortTab({ assort, loyaltyLevels, defaultCurrency, expanded, onToggle,
                       {itemNames.get(item.itemTpl)}
                     </span>
                   )}
+                  {item.lockedByQuest && (
+                    <span className="text-xs bg-yellow-500/20 text-yellow-400 px-2 py-0.5 rounded">Quest locked</span>
+                  )}
                   {itemErrors.length > 0 && (
                     <AlertCircle size={14} className="text-tarkov-error" />
                   )}
@@ -1298,10 +1304,50 @@ function AssortTab({ assort, loyaltyLevels, defaultCurrency, expanded, onToggle,
                         onChange={e => onUpdate(i, 'buyLimit', Number(e.target.value))} min={0} />
                     </Field>
 
-                    <Field label="Locked by Quest" tooltip="Optional: 24-char quest ID. Item is hidden until the player completes that quest.">
-                      <input className="input-field font-mono text-sm" value={item.lockedByQuest || ''}
-                        onChange={e => onUpdate(i, 'lockedByQuest', e.target.value || undefined)}
-                        placeholder="Quest ID (optional)" maxLength={24} />
+                    <Field label="Locked by Quest" tooltip="Item is hidden until the player completes the selected quest. Choose from this trader's quests or enter an external ID.">
+                      {(() => {
+                        const ownQuestIds = new Set(storyQuests.map(q => q.id))
+                        const isOwn = item.lockedByQuest ? ownQuestIds.has(item.lockedByQuest) : false
+                        const isOtherMode = otherQuestMode.has(i) || (!!item.lockedByQuest && !isOwn)
+                        const selectVal = isOtherMode ? '__other__' : (item.lockedByQuest || '')
+                        return (
+                          <div className="flex flex-col gap-1">
+                            <select
+                              className="input-field text-sm"
+                              value={selectVal}
+                              onChange={e => {
+                                const v = e.target.value
+                                if (v === '') {
+                                  setOtherQuestMode(prev => { const n = new Set(prev); n.delete(i); return n })
+                                  onUpdate(i, 'lockedByQuest', undefined)
+                                } else if (v === '__other__') {
+                                  setOtherQuestMode(prev => new Set([...prev, i]))
+                                  onUpdate(i, 'lockedByQuest', undefined)
+                                } else {
+                                  setOtherQuestMode(prev => { const n = new Set(prev); n.delete(i); return n })
+                                  onUpdate(i, 'lockedByQuest', v)
+                                }
+                              }}
+                            >
+                              <option value="">Not locked</option>
+                              {storyQuests.map(q => (
+                                <option key={q.id} value={q.id}>{q.name || q.id}</option>
+                              ))}
+                              <option value="__other__">Other (external quest ID)…</option>
+                            </select>
+                            {isOtherMode && (
+                              <input
+                                className="input-field font-mono text-sm"
+                                value={item.lockedByQuest || ''}
+                                onChange={e => onUpdate(i, 'lockedByQuest', e.target.value || undefined)}
+                                placeholder="24-char external quest ID"
+                                maxLength={24}
+                                autoFocus
+                              />
+                            )}
+                          </div>
+                        )
+                      })()}
                     </Field>
                   </div>
 

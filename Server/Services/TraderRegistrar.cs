@@ -369,9 +369,9 @@ public class TraderRegistrar(
             Base = cloner.Clone(traderBase),
             QuestAssort = new()
             {
-                { "Started", new() },
-                { "Success", new() },
-                { "Fail", new() },
+                { "started", new() },
+                { "success", new() },
+                { "fail", new() },
             },
             Dialogue = [],
         };
@@ -461,7 +461,7 @@ public class TraderRegistrar(
                 // Quest-lock this item if specified
                 if (!string.IsNullOrWhiteSpace(assortItem.LockedByQuest))
                 {
-                    traderData.QuestAssort["Success"][itemId] = assortItem.LockedByQuest;
+                    traderData.QuestAssort["success"][itemId] = assortItem.LockedByQuest;
                 }
             }
             catch (Exception ex)
