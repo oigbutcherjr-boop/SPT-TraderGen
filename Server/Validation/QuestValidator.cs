@@ -273,6 +273,12 @@ public static class QuestValidator
                 errors.Add($"{prefix}.items[{i}]: 'itemTpl' must be a 24-character hex string. Got: '{item.ItemTpl}'");
             if (item.Count < 1)
                 errors.Add($"{prefix}.items[{i}]: 'count' must be >= 1.");
+
+            // Validate child attachments on reward items
+            if (item.Children != null)
+            {
+                ValidateRewardChildren(item.Children, $"{prefix}.items[{i}]", errors);
+            }
         }
 
         if (rewards.TraderStanding < 0)
@@ -386,6 +392,28 @@ public static class QuestValidator
             errors.Add($"{prefix}: rewardScaling.baseMoney cannot be negative.");
         if (!CurrencyHelper.IsValid(template.RewardScaling.Currency))
             errors.Add($"{prefix}: rewardScaling.currency is invalid. Use RUB, USD, or EUR.");
+    }
+
+    private static void ValidateRewardChildren(List<AssortChildItem> children, string prefix, List<string> errors)
+    {
+        for (var i = 0; i < children.Count; i++)
+        {
+            var child = children[i];
+            var childPrefix = $"{prefix}.children[{i}]";
+
+            if (string.IsNullOrWhiteSpace(child.ItemTpl))
+                errors.Add($"{childPrefix}: 'itemTpl' is required.");
+            else if (child.ItemTpl.Length != 24 || !IsHexString(child.ItemTpl))
+                errors.Add($"{childPrefix}: 'itemTpl' must be a 24-character hex string. Got: '{child.ItemTpl}'");
+
+            if (string.IsNullOrWhiteSpace(child.SlotId))
+                errors.Add($"{childPrefix}: 'slotId' is required.");
+
+            if (child.Children != null)
+            {
+                ValidateRewardChildren(child.Children, childPrefix, errors);
+            }
+        }
     }
 
     private static bool IsHexString(string s) => s.All(c => Uri.IsHexDigit(c));

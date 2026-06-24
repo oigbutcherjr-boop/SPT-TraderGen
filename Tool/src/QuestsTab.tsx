@@ -2,19 +2,41 @@ import { useState, useCallback, useMemo } from 'react'
 import {
   Plus, Trash2, ChevronDown, ChevronUp, RefreshCw, Target, Crosshair,
   Clock, MapPin, HelpCircle, AlertCircle, Upload, Image as ImageIcon,
-  Scroll, Repeat, GripVertical, Copy, Package, Search,
+  Scroll, Repeat, GripVertical, Copy, Package, Search, ClipboardPaste,
 } from 'lucide-react'
 import type {
   QuestPackDefinition, StoryQuestDefinition, QuestObjective, QuestRewards, SkillReward,
-  CustomPocketDefinition, PocketSlot,
+  CustomPocketDefinition, PocketSlot, RewardItem, AssortChildItem,
   RotatingQuestTemplate, RotatingObjectiveTemplate, ValidationError,
 } from './types'
 import { useItemNames } from './useItemNames'
 import {
   createDefaultStoryQuest, createDefaultObjective, createDefaultRotatingTemplate,
-  createDefaultRotatingObjective, generateMongoId,
+  createDefaultRotatingObjective, generateMongoId, createDefaultAssortChild,
   MAP_LOCATIONS, OBJECTIVE_TYPES, ENEMY_TARGETS, ROTATION_TYPES,
 } from './types'
+import { ChildItemTree } from './ChildItemTree'
+
+// Immutably update a nested child tree inside a RewardItem.
+function produceRewardChildUpdate(
+  item: RewardItem,
+  path: number[],
+  updater: (node: AssortChildItem) => AssortChildItem
+): RewardItem {
+  if (path.length === 0) return item
+  const newChildren = [...(item.children || [])]
+  let current: AssortChildItem[] = newChildren
+  for (let depth = 0; depth < path.length - 1; depth++) {
+    const idx = path[depth]
+    const node = current[idx]
+    const next = [...(node.children || [])]
+    current[idx] = { ...node, children: next }
+    current = next
+  }
+  const lastIdx = path[path.length - 1]
+  current[lastIdx] = updater(current[lastIdx])
+  return { ...item, children: newChildren }
+}
 
 // Extract names by map location (from SPT database allExtracts.json files).
 // Shown in the Required Extract dropdown for survive/extract objectives.
@@ -140,10 +162,11 @@ function ImageDrop({ dataUrl, onDrop, label, hint }: {
 
 // ==================== Main Quests Tab ====================
 
-export default function QuestsTab({ questPack, traderId, onChange, errors }: {
+export default function QuestsTab({ questPack, traderId, onChange, onImportFromClipboard, errors }: {
   questPack: QuestPackDefinition
   traderId: string
   onChange: (pack: QuestPackDefinition) => void
+  onImportFromClipboard: () => Promise<import('./types').RewardItem | undefined>
   errors: ValidationError[]
 }) {
   const [activeSection, setActiveSection] = useState<'story' | 'rotating'>('story')
@@ -338,6 +361,7 @@ export default function QuestsTab({ questPack, traderId, onChange, errors }: {
                       questIndex={qi}
                       allQuests={questPack.storyQuests}
                       onChange={updates => updateStoryQuest(qi, updates)}
+                      onImportFromClipboard={onImportFromClipboard}
                       errors={questErrors}
                     />
                   )}
@@ -420,11 +444,12 @@ export default function QuestsTab({ questPack, traderId, onChange, errors }: {
 
 // ==================== Story Quest Editor ====================
 
-function StoryQuestEditor({ quest, questIndex, allQuests, onChange, errors }: {
+function StoryQuestEditor({ quest, questIndex, allQuests, onChange, onImportFromClipboard, errors }: {
   quest: StoryQuestDefinition
   questIndex: number
   allQuests: StoryQuestDefinition[]
   onChange: (updates: Partial<StoryQuestDefinition>) => void
+  onImportFromClipboard: () => Promise<RewardItem | undefined>
   errors: ValidationError[]
 }) {
   const [expandedObj, setExpandedObj] = useState<number | null>(null)
@@ -685,6 +710,18 @@ function StoryQuestEditor({ quest, questIndex, allQuests, onChange, errors }: {
             >
               <Plus size={12} /> Add Item
             </button>
+            <button
+              onClick={async () => {
+                const imported = await onImportFromClipboard()
+                if (imported) {
+                  const newItems = [...(quest.rewards.items || []), imported]
+                  updateRewards({ items: newItems })
+                }
+              }}
+              className="btn-secondary text-xs flex items-center gap-1 px-2 py-1"
+            >
+              <ClipboardPaste size={12} /> Import from TraderGen
+            </button>
             <p className="text-xs text-tarkov-text-dim">
               Find IDs at{' '}
               <a href="https://db.sp-tarkov.com/search" target="_blank" rel="noopener noreferrer"
@@ -696,54 +733,107 @@ function StoryQuestEditor({ quest, questIndex, allQuests, onChange, errors }: {
           </div>
 
           {(quest.rewards.items || []).length > 0 && (
-            <div className="mt-2 space-y-1">
+            <div className="mt-2 space-y-2">
               {(quest.rewards.items || []).map((item, idx) => (
-                <div key={idx} className="flex items-start gap-2 bg-tarkov-bg rounded p-1.5 border border-tarkov-border/50">
-                  <div className="flex-1 min-w-0 max-w-[240px]">
-                    <div className="flex items-center gap-1">
-                      <input
-                        type="text"
-                        className="input-field text-xs font-mono w-full py-1"
-                        value={item.itemTpl}
-                        onChange={e => {
-                          const newItems = [...(quest.rewards.items || [])]
-                          newItems[idx] = { ...item, itemTpl: e.target.value }
-                          updateRewards({ items: newItems })
-                        }}
-                        placeholder="Item TPL ID"
-                        maxLength={24}
-                      />
-                      <TooltipIcon text="Item to be rewarded." />
+                <div key={idx} className="bg-tarkov-bg rounded p-2 border border-tarkov-border/50">
+                  <div className="flex items-start gap-2">
+                    <div className="flex-1 min-w-0 max-w-[240px]">
+                      <div className="flex items-center gap-1">
+                        <input
+                          type="text"
+                          className="input-field text-xs font-mono w-full py-1"
+                          value={item.itemTpl}
+                          onChange={e => {
+                            const newItems = [...(quest.rewards.items || [])]
+                            newItems[idx] = { ...item, itemTpl: e.target.value }
+                            updateRewards({ items: newItems })
+                          }}
+                          placeholder="Item TPL ID"
+                          maxLength={24}
+                        />
+                        <TooltipIcon text="Item to be rewarded." />
+                      </div>
+                      {item.itemTpl && itemNames.get(item.itemTpl) && (
+                        <p className="text-xs text-tarkov-accent truncate">{itemNames.get(item.itemTpl)}</p>
+                      )}
                     </div>
-                    {item.itemTpl && itemNames.get(item.itemTpl) && (
-                      <p className="text-xs text-tarkov-accent truncate">{itemNames.get(item.itemTpl)}</p>
-                    )}
-                  </div>
-                  <div className="w-20">
-                    <div className="flex items-center gap-1">
-                      <input
-                        type="number"
-                        min="1"
-                        className="input-field text-xs w-full text-center py-1"
-                        value={item.count}
-                        onChange={e => {
-                          const newItems = [...(quest.rewards.items || [])]
-                          newItems[idx] = { ...item, count: parseInt(e.target.value) || 1 }
-                          updateRewards({ items: newItems })
-                        }}
-                      />
-                      <TooltipIcon text="Quantity of this item to be rewarded." />
+                    <div className="w-20">
+                      <div className="flex items-center gap-1">
+                        <input
+                          type="number"
+                          min="1"
+                          className="input-field text-xs w-full text-center py-1"
+                          value={item.count}
+                          onChange={e => {
+                            const newItems = [...(quest.rewards.items || [])]
+                            newItems[idx] = { ...item, count: parseInt(e.target.value) || 1 }
+                            updateRewards({ items: newItems })
+                          }}
+                        />
+                        <TooltipIcon text="Quantity of this item to be rewarded." />
+                      </div>
                     </div>
+                    <button
+                      onClick={() => {
+                        const newItems = (quest.rewards.items || []).filter((_, i) => i !== idx)
+                        updateRewards({ items: newItems })
+                      }}
+                      className="text-tarkov-error hover:text-tarkov-error/80 p-1 mt-1"
+                    >
+                      <Trash2 size={12} />
+                    </button>
                   </div>
-                  <button
-                    onClick={() => {
-                      const newItems = (quest.rewards.items || []).filter((_, i) => i !== idx)
-                      updateRewards({ items: newItems })
-                    }}
-                    className="text-tarkov-error hover:text-tarkov-error/80 p-1 mt-1"
-                  >
-                    <Trash2 size={12} />
-                  </button>
+
+                  {/* Child attachments for this reward item */}
+                  <div className="mt-2 pt-2 border-t border-tarkov-border/30">
+                    <ChildItemTree
+                      children={item.children || []}
+                      path={[]}
+                      onAdd={(path) => {
+                        const newItems = [...(quest.rewards.items || [])]
+                        const target = newItems[idx]
+                        if (path.length === 0) {
+                          newItems[idx] = { ...target, children: [...(target.children || []), createDefaultAssortChild()] }
+                        } else {
+                          newItems[idx] = produceRewardChildUpdate(target, path, node => ({
+                            ...node,
+                            children: [...(node.children || []), createDefaultAssortChild()],
+                          }))
+                        }
+                        updateRewards({ items: newItems })
+                      }}
+                      onRemove={(path) => {
+                        const newItems = [...(quest.rewards.items || [])]
+                        const target = newItems[idx]
+                        if (path.length === 1) {
+                          newItems[idx] = { ...target, children: (target.children || []).filter((_, j) => j !== path[0]) }
+                        } else {
+                          const parentPath = path.slice(0, -1)
+                          const childIdx = path[path.length - 1]
+                          newItems[idx] = produceRewardChildUpdate(target, parentPath, node => ({
+                            ...node,
+                            children: (node.children || []).filter((_, j) => j !== childIdx),
+                          }))
+                        }
+                        updateRewards({ items: newItems })
+                      }}
+                      onUpdate={(path, key, value) => {
+                        const newItems = [...(quest.rewards.items || [])]
+                        const target = newItems[idx]
+                        if (path.length === 1) {
+                          newItems[idx] = {
+                            ...target,
+                            children: (target.children || []).map((c, j) =>
+                              j === path[0] ? { ...c, [key]: value } : c
+                            ),
+                          }
+                        } else {
+                          newItems[idx] = produceRewardChildUpdate(target, path, node => ({ ...node, [key]: value }))
+                        }
+                        updateRewards({ items: newItems })
+                      }}
+                    />
+                  </div>
                 </div>
               ))}
             </div>

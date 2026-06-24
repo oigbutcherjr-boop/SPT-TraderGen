@@ -457,6 +457,12 @@ public class TraderRegistrar(
 
                 // Set loyalty level
                 traderData.Assort.LoyalLevelItems[itemId] = assortItem.LoyaltyLevel;
+
+                // Quest-lock this item if specified
+                if (!string.IsNullOrWhiteSpace(assortItem.LockedByQuest))
+                {
+                    traderData.QuestAssort["Success"][itemId] = assortItem.LockedByQuest;
+                }
             }
             catch (Exception ex)
             {

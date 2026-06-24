@@ -261,6 +261,11 @@ public class ItemReward
     // How many of this item to give.
     [JsonPropertyName("count")]
     public int Count { get; set; } = 1;
+
+    // Child items attached to this reward item (e.g. weapon attachments, armour plates).
+    // Uses the same structure as assort child items.
+    [JsonPropertyName("children")]
+    public List<AssortChildItem>? Children { get; set; }
 }
 
 // ==================== Rotating Quest Templates ====================

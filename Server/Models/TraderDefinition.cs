@@ -176,6 +176,11 @@ public class AssortItemDefinition
     // weapon parts). Each child sits in a specific slot on the parent.
     [JsonPropertyName("children")]
     public List<AssortChildItem>? Children { get; set; }
+
+    // Quest ID that must be completed before this item appears in the trader's assortment.
+    // The item is hidden until the player completes the specified quest.
+    [JsonPropertyName("lockedByQuest")]
+    public string? LockedByQuest { get; set; }
 }
 
 // A child item attached to an assort root item or another child item.

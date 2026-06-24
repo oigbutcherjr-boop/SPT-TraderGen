@@ -127,6 +127,11 @@ public static class TraderValidator
                 errors.Add($"{itemPrefix}: Invalid currency '{item.Currency}'. Use 'RUB', 'USD', or 'EUR'.");
             }
 
+            if (!string.IsNullOrWhiteSpace(item.LockedByQuest) && (item.LockedByQuest.Length != 24 || !IsHexString(item.LockedByQuest)))
+            {
+                errors.Add($"{itemPrefix}: 'lockedByQuest' must be a 24-character hex string. Got: '{item.LockedByQuest}'");
+            }
+
             // Validate barter items
             if (hasBarter)
             {

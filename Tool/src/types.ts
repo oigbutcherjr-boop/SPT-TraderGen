@@ -51,6 +51,7 @@ export interface AssortItem {
   barter?: BarterRequirement[]
   buyLimit: number
   children?: AssortChildItem[]
+  lockedByQuest?: string
 }
 
 export interface BarterRequirement {
@@ -143,6 +144,7 @@ export interface MoneyReward {
 export interface RewardItem {
   itemTpl: string
   count: number
+  children?: AssortChildItem[]
 }
 
 export interface RotatingQuestTemplate {

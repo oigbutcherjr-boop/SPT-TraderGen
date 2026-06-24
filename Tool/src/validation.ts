@@ -89,6 +89,10 @@ export function validateTrader(trader: TraderDefinition): ValidationError[] {
       }
     }
 
+    if (item.lockedByQuest && !HEX_24.test(item.lockedByQuest)) {
+      errors.push({ field: `assort.${i}.lockedByQuest`, message: `${prefix}: lockedByQuest must be a 24-char hex quest ID.` })
+    }
+
     validateChildren(item.children, errors, prefix, 'children')
   }
 
@@ -162,6 +166,7 @@ export function buildExportJson(trader: TraderDefinition): object {
       }
       if (item.buyLimit > 0) out.buyLimit = item.buyLimit
       if (item.children && item.children.length > 0) out.children = item.children
+      if (item.lockedByQuest) out.lockedByQuest = item.lockedByQuest
       return out
     }),
   }
@@ -302,6 +307,21 @@ export function validateQuestPack(pack: QuestPackDefinition, traderId: string): 
         }
       }
     }
+
+    if (q.rewards.items) {
+      for (let ri = 0; ri < q.rewards.items.length; ri++) {
+        const item = q.rewards.items[ri]
+        if (!item.itemTpl || !HEX_24.test(item.itemTpl)) {
+          errors.push({ field: `quest.${i}.rewards.items[${ri}].itemTpl`, message: `${prefix}: reward item[${ri}] itemTpl must be 24-char hex.` })
+        }
+        if (item.count < 1) {
+          errors.push({ field: `quest.${i}.rewards.items[${ri}].count`, message: `${prefix}: reward item[${ri}] count must be >= 1.` })
+        }
+        if (item.children) {
+          validateChildren(item.children, errors, `${prefix}.rewards.items[${ri}]`, 'children')
+        }
+      }
+    }
   }
 
   for (let i = 0; i < pack.rotatingQuests.length; i++) {
@@ -435,7 +455,13 @@ function buildRewardsJson(rewards: QuestPackDefinition['storyQuests'][0]['reward
     r.money = { currency: rewards.money.currency, amount: rewards.money.amount }
   }
   if (rewards.traderStanding !== 0) r.traderStanding = rewards.traderStanding
-  if (rewards.items && rewards.items.length > 0) r.items = rewards.items
+  if (rewards.items && rewards.items.length > 0) {
+    r.items = rewards.items.map(item => {
+      const out: Record<string, unknown> = { itemTpl: item.itemTpl, count: item.count }
+      if (item.children && item.children.length > 0) out.children = item.children
+      return out
+    })
+  }
   if (rewards.unlockAssortItems && rewards.unlockAssortItems.length > 0) {
     r.unlockAssortItems = rewards.unlockAssortItems
   }

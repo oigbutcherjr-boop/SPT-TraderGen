@@ -540,24 +540,32 @@ public static class QuestBuilder
         foreach (var item in rewards.Items)
         {
             var itemRewardId = GenerateId();
+            var rewardItems = new JsonArray
+            {
+                new JsonObject
+                {
+                    ["_id"] = itemRewardId,
+                    ["_tpl"] = item.ItemTpl,
+                    ["upd"] = new JsonObject
+                    {
+                        ["StackObjectsCount"] = item.Count,
+                    },
+                },
+            };
+
+            // Flatten child attachments into the reward item list
+            if (item.Children is { Count: > 0 })
+            {
+                FlattenRewardChildren(item.Children, itemRewardId, rewardItems);
+            }
+
             result.Add(new JsonObject
             {
                 ["availableInGameEditions"] = new JsonArray(),
                 ["findInRaid"] = true,
                 ["id"] = GenerateId(),
                 ["index"] = idx++,
-                ["items"] = new JsonArray
-                {
-                    new JsonObject
-                    {
-                        ["_id"] = itemRewardId,
-                        ["_tpl"] = item.ItemTpl,
-                        ["upd"] = new JsonObject
-                        {
-                            ["StackObjectsCount"] = item.Count,
-                        },
-                    },
-                },
+                ["items"] = rewardItems,
                 ["target"] = itemRewardId,
                 ["type"] = "Item",
                 ["value"] = item.Count.ToString(),
@@ -761,6 +769,27 @@ public static class QuestBuilder
     {
         var hash = System.Security.Cryptography.MD5.HashData(System.Text.Encoding.UTF8.GetBytes(seed));
         return Convert.ToHexStringLower(hash)[..24];
+    }
+
+    // Recursively flatten reward child items into a flat JsonArray for BSG quest rewards.
+    private static void FlattenRewardChildren(List<AssortChildItem> children, string parentId, JsonArray output)
+    {
+        foreach (var child in children)
+        {
+            var childId = child.ItemId ?? GenerateId();
+            output.Add(new JsonObject
+            {
+                ["_id"] = childId,
+                ["_tpl"] = child.ItemTpl,
+                ["parentId"] = parentId,
+                ["slotId"] = child.SlotId,
+            });
+
+            if (child.Children is { Count: > 0 })
+            {
+                FlattenRewardChildren(child.Children, childId, output);
+            }
+        }
     }
 
     // Generate 24-char hex ID.
