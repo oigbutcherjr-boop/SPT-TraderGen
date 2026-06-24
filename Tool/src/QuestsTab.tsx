@@ -668,7 +668,7 @@ function StoryQuestEditor({ quest, questIndex, allQuests, onChange, onImportFrom
       {/* Rewards */}
       <div>
         <h3 className="text-sm font-semibold text-tarkov-accent flex items-center gap-2 mb-3">
-          <Star size={16} /> Rewards <span className="text-tarkov-error text-[11px] font-normal">(stash rows, skills & pockets not in latest release yet)</span>
+          <Star size={16} /> Rewards <span className="text-tarkov-error text-[11px] font-normal">(pockets not working yet)</span>
         </h3>
         <div className="bg-tarkov-bg rounded-lg p-4 space-y-4">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -1198,7 +1198,7 @@ function AdvancedConditions({ objective, onChange }: {
           {/* Required extract */}
           {isLocation && (
             <div className="space-y-2">
-              <Field label={<>Required Extract <span className="text-tarkov-error text-[11px] font-normal">(not in latest release yet)</span></>} tooltip="Specific extract point name. Leave blank for any extract.">
+              <Field label="Required Extract" tooltip="Specific extract point name. Leave blank for any extract.">
                 {availableExtracts.length > 0 ? (
                   <div className="flex gap-2">
                     <select
