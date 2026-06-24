@@ -224,6 +224,9 @@ public static class QuestBuilder
             "kill_enemy" => BuildKillCondition(obj, index, locales, questId),
             "survive_location" => BuildSurviveCondition(obj, index, locales, questId),
             "extract_location" => BuildExtractCondition(obj, index, locales, questId),
+            "zone_visit" => BuildZoneVisitCondition(obj, index, locales, questId),
+            "zone_kill" => BuildZoneKillCondition(obj, index, locales, questId),
+            "zone_place_item" => BuildZonePlaceItemCondition(obj, index, locales, questId),
             _ => throw new InvalidOperationException($"Unknown objective type: {obj.Type}"),
         };
     }
@@ -471,6 +474,153 @@ public static class QuestBuilder
         return BuildSurviveCondition(obj, index, locales, questId);
     }
 
+    private static JsonObject BuildZoneVisitCondition(QuestObjective obj, int index, JsonObject locales, string questId)
+    {
+        var condId = DeriveStableId($"{questId}:obj{index}:cond");
+        var counterId = DeriveStableId($"{questId}:obj{index}:counter");
+        var visitCondId = DeriveStableId($"{questId}:obj{index}:visit");
+
+        var desc = obj.Description ?? "Visit the designated zone";
+        locales[condId] = desc;
+
+        var counterConditions = new JsonArray
+        {
+            new JsonObject
+            {
+                ["conditionType"] = "VisitPlace",
+                ["dynamicLocale"] = false,
+                ["id"] = visitCondId,
+                ["target"] = obj.ZoneId!,
+                ["value"] = 1,
+            },
+        };
+
+        return new JsonObject
+        {
+            ["completeInSeconds"] = obj.PlantTime ?? 0,
+            ["conditionType"] = "CounterCreator",
+            ["counter"] = new JsonObject
+            {
+                ["conditions"] = counterConditions,
+                ["id"] = counterId,
+            },
+            ["doNotResetIfCounterCompleted"] = false,
+            ["dynamicLocale"] = false,
+            ["globalQuestCounterId"] = "",
+            ["id"] = condId,
+            ["index"] = index,
+            ["oneSessionOnly"] = obj.OneSessionOnly,
+            ["parentId"] = "",
+            ["type"] = "Exploration",
+            ["value"] = obj.Count,
+            ["visibilityConditions"] = new JsonArray(),
+        };
+    }
+
+    private static JsonObject BuildZoneKillCondition(QuestObjective obj, int index, JsonObject locales, string questId)
+    {
+        // Build a standard kill condition then inject an InZone sub-condition
+        var condId = DeriveStableId($"{questId}:obj{index}:cond");
+        var killCondId = DeriveStableId($"{questId}:obj{index}:kill");
+        var counterId = DeriveStableId($"{questId}:obj{index}:counter");
+        var zoneCondId = DeriveStableId($"{questId}:obj{index}:zone");
+
+        var target = obj.Target ?? "Savage";
+        var savageRole = new JsonArray();
+        var bsgTarget = target switch
+        {
+            "exUsec" or "pmcBot" or "sectantPriest" or "sectantWarrior"
+                or "bossKnight" or "bossBully" or "bossKilla" or "bossKojaniy"
+                or "bossSanitar" or "bossTagilla" or "bossGluhar" or "bossZryachiy"
+                or "bossBoar" or "bossPartisan" or "bossKolontay"
+                => "Savage",
+            _ => target,
+        };
+        if (bsgTarget == "Savage" && target != "Savage" && target != "Any")
+            savageRole.Add(target);
+
+        var desc = obj.Description ?? $"Eliminate {obj.Count} enemies in the designated zone";
+        locales[condId] = desc;
+
+        var killCond = new JsonObject
+        {
+            ["bodyPart"] = new JsonArray(),
+            ["compareMethod"] = ">=",
+            ["conditionType"] = "Kills",
+            ["daytime"] = new JsonObject { ["from"] = 0, ["to"] = 0 },
+            ["distance"] = new JsonObject { ["compareMethod"] = ">=", ["value"] = 0 },
+            ["dynamicLocale"] = false,
+            ["enemyEquipmentExclusive"] = new JsonArray(),
+            ["enemyEquipmentInclusive"] = new JsonArray(),
+            ["enemyHealthEffects"] = new JsonArray(),
+            ["id"] = killCondId,
+            ["resetOnSessionEnd"] = obj.OneSessionOnly,
+            ["savageRole"] = savageRole,
+            ["target"] = bsgTarget,
+            ["value"] = 1,
+            ["weapon"] = new JsonArray(),
+            ["weaponCaliber"] = new JsonArray(),
+            ["weaponModsInclusive"] = new JsonArray(),
+            ["weaponModsExclusive"] = new JsonArray(),
+        };
+
+        var counterConditions = new JsonArray
+        {
+            killCond,
+            new JsonObject
+            {
+                ["conditionType"] = "InZone",
+                ["dynamicLocale"] = false,
+                ["id"] = zoneCondId,
+                ["zoneIds"] = new JsonArray { obj.ZoneId! },
+            },
+        };
+
+        return new JsonObject
+        {
+            ["completeInSeconds"] = 0,
+            ["conditionType"] = "CounterCreator",
+            ["counter"] = new JsonObject
+            {
+                ["conditions"] = counterConditions,
+                ["id"] = counterId,
+            },
+            ["doNotResetIfCounterCompleted"] = false,
+            ["dynamicLocale"] = false,
+            ["globalQuestCounterId"] = "",
+            ["id"] = condId,
+            ["index"] = index,
+            ["oneSessionOnly"] = obj.OneSessionOnly,
+            ["parentId"] = "",
+            ["type"] = "Elimination",
+            ["value"] = obj.Count,
+            ["visibilityConditions"] = new JsonArray(),
+        };
+    }
+
+    private static JsonObject BuildZonePlaceItemCondition(QuestObjective obj, int index, JsonObject locales, string questId)
+    {
+        var condId = DeriveStableId($"{questId}:obj{index}:cond");
+
+        var desc = obj.Description ?? $"Place the required item at the designated location";
+        locales[condId] = desc;
+
+        return new JsonObject
+        {
+            ["conditionType"] = "PlaceBeacon",
+            ["dynamicLocale"] = false,
+            ["globalQuestCounterId"] = "",
+            ["id"] = condId,
+            ["index"] = index,
+            ["parentId"] = "",
+            ["plantTime"] = obj.PlantTime ?? 3,
+            ["target"] = obj.PlantItemTpl ?? "",
+            ["zoneId"] = obj.ZoneId ?? "",
+            ["value"] = obj.Count,
+            ["visibilityConditions"] = new JsonArray(),
+        };
+    }
+
     // Returns a JsonArray of location target strings for counter conditions.
     // Ground Zero has two variants (Sandbox / sandbox_high) so both are included
     // to ensure objectives track regardless of player level.
@@ -482,7 +632,7 @@ public static class QuestBuilder
             return new JsonArray { "Sandbox_high", "Sandbox" };
         if (string.Equals(location, "factory4", StringComparison.OrdinalIgnoreCase))
             return new JsonArray { "factory4_day", "factory4_night" };
-        return new JsonArray { location };
+        return new JsonArray { LocationHelper.ToBsgLocationTarget(location) };
     }
 
     // Reward builder

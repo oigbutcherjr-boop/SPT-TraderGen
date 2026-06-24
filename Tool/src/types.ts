@@ -64,11 +64,23 @@ export interface BarterRequirement {
 
 // ==================== Quest Types ====================
 
+export interface QuestZone {
+  zoneId: string
+  zoneName: string
+  zoneLocation: string
+  zoneType: string  // 'visit' | 'placeitem' | 'transition' | 'flare' | 'salvagehint'
+  flareType: string
+  position: { x: string; y: string; z: string }
+  rotation: { x: string; y: string; z: string; w: string }
+  scale: { x: string; y: string; z: string }
+}
+
 export interface QuestPackDefinition {
   defaultQuestIcon?: string
   defaultQuestIconDataUrl?: string  // Tool-only: holds the drag-and-drop image data
   storyQuests: StoryQuestDefinition[]
   rotatingQuests: RotatingQuestTemplate[]
+  zones: QuestZone[]
 }
 
 export interface StoryQuestDefinition {
@@ -109,6 +121,10 @@ export interface QuestObjective {
   bodyPart?: string[]
   requiredExtract?: string
   oneSessionOnly?: boolean
+  // Zone objective fields
+  zoneId?: string
+  plantTime?: number
+  plantItemTpl?: string
 }
 
 export interface QuestRewards {
@@ -188,7 +204,7 @@ export const MAP_LOCATIONS = [
   { value: 'Shoreline', label: 'Shoreline' },
   { value: 'Interchange', label: 'Interchange' },
   { value: 'Lighthouse', label: 'Lighthouse' },
-  { value: 'Reserve', label: 'Reserve' },
+  { value: 'RezervBase', label: 'Reserve' },
   { value: 'laboratory', label: 'The Lab' },
   { value: 'TarkovStreets', label: 'Streets of Tarkov' },
   { value: 'Sandbox', label: 'Ground Zero' },
@@ -200,6 +216,17 @@ export const OBJECTIVE_TYPES = [
   { value: 'handover_fir_item', label: 'Hand Over Items (Found in Raid)' },
   { value: 'survive_location', label: 'Survive & Extract' },
   { value: 'extract_location', label: 'Extract from Location' },
+  { value: 'zone_visit', label: 'Visit Zone' },
+  { value: 'zone_kill', label: 'Kill in Zone' },
+  { value: 'zone_place_item', label: 'Place Item in Zone' },
+] as const
+
+export const ZONE_TYPES = [
+  { value: 'visit', label: 'Visit' },
+  { value: 'placeitem', label: 'Place Item' },
+  { value: 'transition', label: 'Transition / Extract' },
+  { value: 'flare', label: 'Flare' },
+  { value: 'salvagehint', label: 'Salvage Hint' },
 ] as const
 
 export const ENEMY_TARGETS = [
@@ -389,6 +416,7 @@ export function createDefaultQuestPack(): QuestPackDefinition {
   return {
     storyQuests: [],
     rotatingQuests: [],
+    zones: [],
   }
 }
 

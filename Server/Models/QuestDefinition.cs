@@ -18,6 +18,10 @@ public class QuestPackDefinition
     // List of rotating quest templates — used to generate daily/weekly quests at server start.
     [JsonPropertyName("rotatingQuests")]
     public List<RotatingQuestTemplate> RotatingQuests { get; set; } = [];
+
+    // Custom quest zones defined for this pack. Registered via WTT-CommonLib on startup.
+    [JsonPropertyName("zones")]
+    public List<QuestZoneDefinition> Zones { get; set; } = [];
 }
 
 // A single story quest with fixed objectives and rewards.
@@ -163,6 +167,20 @@ public class QuestObjective
     // Use for "kill X in one raid" style objectives. Default false.
     [JsonPropertyName("oneSessionOnly")]
     public bool OneSessionOnly { get; set; } = false;
+
+    // --- zone_visit / zone_place_item / zone_kill fields ---
+
+    // Zone ID referencing a zone defined in this quest pack's zones list.
+    [JsonPropertyName("zoneId")]
+    public string? ZoneId { get; set; }
+
+    // Time in seconds the player must remain in the zone (for zone_visit). Default 0 = instant.
+    [JsonPropertyName("plantTime")]
+    public int? PlantTime { get; set; }
+
+    // Item template ID to place at the zone (for zone_place_item).
+    [JsonPropertyName("plantItemTpl")]
+    public string? PlantItemTpl { get; set; }
 }
 
 // Rewards given when the quest is completed successfully.
@@ -266,6 +284,62 @@ public class ItemReward
     // Uses the same structure as assort child items.
     [JsonPropertyName("children")]
     public List<AssortChildItem>? Children { get; set; }
+}
+
+// ==================== Zone Definitions ====================
+
+// A custom quest zone registered with WTT-CommonLib's CustomQuestZoneService.
+// Zones are physical trigger volumes placed in the game world.
+public class QuestZoneDefinition
+{
+    // Unique zone ID. Referenced by zone_visit / zone_place_item / zone_kill objectives.
+    [JsonPropertyName("zoneId")]
+    public string ZoneId { get; set; } = string.Empty;
+
+    // Display name for the zone (used internally).
+    [JsonPropertyName("zoneName")]
+    public string ZoneName { get; set; } = string.Empty;
+
+    // Map location ID (lowercase, e.g. "woods", "bigmap", "shoreline").
+    [JsonPropertyName("zoneLocation")]
+    public string ZoneLocation { get; set; } = string.Empty;
+
+    // Zone type: "visit", "placeitem", "transition", "flare", "salvagehint".
+    [JsonPropertyName("zoneType")]
+    public string ZoneType { get; set; } = "visit";
+
+    // Flare type (only for flare zones, leave empty otherwise).
+    [JsonPropertyName("flareType")]
+    public string FlareType { get; set; } = string.Empty;
+
+    // World position of the zone centre.
+    [JsonPropertyName("position")]
+    public ZoneVector3 Position { get; set; } = new();
+
+    // Rotation of the zone (Euler angles, W=1 for identity quaternion).
+    [JsonPropertyName("rotation")]
+    public ZoneVector4 Rotation { get; set; } = new();
+
+    // Scale / size of the zone trigger volume.
+    [JsonPropertyName("scale")]
+    public ZoneVector3 Scale { get; set; } = new();
+}
+
+// XYZ float vector for zone position/scale.
+public class ZoneVector3
+{
+    [JsonPropertyName("x")] public string X { get; set; } = "0";
+    [JsonPropertyName("y")] public string Y { get; set; } = "0";
+    [JsonPropertyName("z")] public string Z { get; set; } = "0";
+}
+
+// XYZW float vector for zone rotation quaternion.
+public class ZoneVector4
+{
+    [JsonPropertyName("x")] public string X { get; set; } = "0";
+    [JsonPropertyName("y")] public string Y { get; set; } = "0";
+    [JsonPropertyName("z")] public string Z { get; set; } = "0";
+    [JsonPropertyName("w")] public string W { get; set; } = "1";
 }
 
 // ==================== Rotating Quest Templates ====================

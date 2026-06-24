@@ -15,6 +15,7 @@ public static class LocationHelper
         ["Interchange"] = "Interchange",
         ["Lighthouse"] = "Lighthouse",
         ["Reserve"] = "Reserve",
+        ["RezervBase"] = "Reserve",
         ["laboratory"] = "The Lab",
         ["TarkovStreets"] = "Streets of Tarkov",
         ["Sandbox"] = "Ground Zero",
@@ -53,6 +54,15 @@ public static class LocationHelper
         if (string.IsNullOrWhiteSpace(location) || location == "any")
             return "any";
         return LocationIdMap.GetValueOrDefault(location, location);
+    }
+
+    // Normalises a location key to the value BSG uses inside Location counter conditions.
+    // "Reserve" and "RezervBase" both need to appear as "RezervBase" in counter targets.
+    public static string ToBsgLocationTarget(string location)
+    {
+        return string.Equals(location, "Reserve", StringComparison.OrdinalIgnoreCase)
+            ? "RezervBase"
+            : location;
     }
 
     // Maps a location string to its BSG database location ID.

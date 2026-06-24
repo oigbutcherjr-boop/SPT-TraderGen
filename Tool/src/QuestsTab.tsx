@@ -13,7 +13,7 @@ import { useItemNames } from './useItemNames'
 import {
   createDefaultStoryQuest, createDefaultObjective, createDefaultRotatingTemplate,
   createDefaultRotatingObjective, generateMongoId, createDefaultAssortChild,
-  MAP_LOCATIONS, OBJECTIVE_TYPES, ENEMY_TARGETS, ROTATION_TYPES,
+  MAP_LOCATIONS, OBJECTIVE_TYPES, ZONE_TYPES, ENEMY_TARGETS, ROTATION_TYPES, QuestZone,
 } from './types'
 import { ChildItemTree } from './ChildItemTree'
 
@@ -169,7 +169,7 @@ export default function QuestsTab({ questPack, traderId, onChange, onImportFromC
   onImportFromClipboard: () => Promise<import('./types').RewardItem | undefined>
   errors: ValidationError[]
 }) {
-  const [activeSection, setActiveSection] = useState<'story' | 'rotating'>('story')
+  const [activeSection, setActiveSection] = useState<'story' | 'rotating' | 'zones'>('story')
   const [expandedQuest, setExpandedQuest] = useState<number | null>(null)
   const [expandedRotating, setExpandedRotating] = useState<number | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
@@ -274,6 +274,19 @@ export default function QuestsTab({ questPack, traderId, onChange, onImportFromC
           <span className="ml-1 text-xs px-1.5 py-0.5 rounded-full bg-tarkov-accent/20 text-tarkov-accent">WIP</span>
           {questPack.rotatingQuests.length > 0 && (
             <span className="ml-1 text-xs px-1.5 py-0.5 rounded-full bg-tarkov-accent/20 text-tarkov-accent">{questPack.rotatingQuests.length}</span>
+          )}
+        </button>
+        <button
+          onClick={() => setActiveSection('zones')}
+          className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded text-sm font-medium transition-colors ${
+            activeSection === 'zones' ? 'bg-tarkov-accent text-tarkov-bg' : 'text-tarkov-text-dim hover:text-tarkov-text'
+          }`}
+        >
+          <MapPin size={16} /> Quest Zones
+          {(questPack.zones?.length ?? 0) > 0 && (
+            <span className={`ml-1 text-xs px-1.5 py-0.5 rounded-full ${
+              activeSection === 'zones' ? 'bg-tarkov-bg/30 text-tarkov-bg' : 'bg-tarkov-accent/20 text-tarkov-accent'
+            }`}>{questPack.zones.length}</span>
           )}
         </button>
       </div>
@@ -430,6 +443,14 @@ export default function QuestsTab({ questPack, traderId, onChange, onImportFromC
             })}
           </div>
         </div>
+      )}
+
+      {/* Zones Section */}
+      {activeSection === 'zones' && (
+        <ZoneManager
+          zones={questPack.zones ?? []}
+          onChange={zones => onChange({ ...questPack, zones })}
+        />
       )}
 
       {!hasQuests && (
@@ -961,9 +982,18 @@ function ObjectiveEditor({ objective, onChange }: {
   const isKill = objective.type === 'kill_enemy'
   const isHandover = objective.type === 'handover_item' || objective.type === 'handover_fir_item'
   const isLocation = objective.type === 'survive_location' || objective.type === 'extract_location'
+  const isZone = objective.type === 'zone_visit' || objective.type === 'zone_kill' || objective.type === 'zone_place_item'
+  const isZoneKill = objective.type === 'zone_kill'
+  const isZonePlaceItem = objective.type === 'zone_place_item'
 
   return (
     <div className="px-3 pb-3 space-y-3 border-t border-tarkov-border/50">
+      {isZone && (
+        <div className="flex items-center gap-2 mt-3 px-3 py-2 rounded bg-tarkov-error/10 border border-tarkov-error/40 text-tarkov-error text-xs">
+          <AlertCircle size={13} className="shrink-0" />
+          Zone-based objectives are <strong>not available in the current release</strong>. This feature is still in development.
+        </div>
+      )}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-3">
         <Field label="Type" tooltip="What kind of objective this is.">
           <select className="input-field text-sm" value={objective.type}
@@ -973,6 +1003,9 @@ function ObjectiveEditor({ objective, onChange }: {
               if (t === 'kill_enemy') { updates.target = 'Savage'; updates.itemTpl = undefined }
               if (t === 'handover_item' || t === 'handover_fir_item') { updates.target = undefined; updates.itemTpl = ''; updates.location = undefined }
               if (t === 'survive_location' || t === 'extract_location') { updates.location = 'bigmap'; updates.target = undefined; updates.itemTpl = undefined }
+              if (t === 'zone_visit') { updates.zoneId = ''; updates.target = undefined; updates.itemTpl = undefined; updates.plantItemTpl = undefined }
+              if (t === 'zone_kill') { updates.zoneId = ''; updates.target = 'Savage'; updates.itemTpl = undefined; updates.plantItemTpl = undefined }
+              if (t === 'zone_place_item') { updates.zoneId = ''; updates.plantItemTpl = ''; updates.target = undefined; updates.itemTpl = undefined }
               onChange(updates)
             }}>
             {OBJECTIVE_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
@@ -1025,6 +1058,51 @@ function ObjectiveEditor({ objective, onChange }: {
                 <option key={l.value} value={l.value}>{l.label}</option>
               ))}
             </select>
+          </Field>
+        )}
+
+        {isZone && (
+          <Field label="Zone ID" tooltip="The zoneId of the zone defined in the Zones tab above.">
+            <input className="input-field text-sm font-mono" value={objective.zoneId || ''}
+              onChange={e => onChange({ zoneId: e.target.value || undefined })}
+              placeholder="e.g. my_zone_woods_01" />
+          </Field>
+        )}
+
+        {isZone && (
+          <Field label="Location (optional)" tooltip="Restrict to a specific map. Should match the zone's map.">
+            <select className="input-field text-sm" value={objective.location || ''}
+              onChange={e => onChange({ location: e.target.value || undefined })}>
+              <option value="">Any Map</option>
+              {MAP_LOCATIONS.filter(l => l.value !== 'any').map(l => (
+                <option key={l.value} value={l.value}>{l.label}</option>
+              ))}
+            </select>
+          </Field>
+        )}
+
+        {isZoneKill && (
+          <Field label="Enemy Target" tooltip="What type of enemy to kill inside the zone.">
+            <select className="input-field text-sm" value={objective.target || 'Savage'}
+              onChange={e => onChange({ target: e.target.value })}>
+              {ENEMY_TARGETS.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+            </select>
+          </Field>
+        )}
+
+        {(isZone && !isZoneKill) && (
+          <Field label="Linger Time (s)" tooltip="Seconds player must stay in zone. 0 = instant trigger.">
+            <input type="number" className="input-field text-sm" min={0}
+              value={objective.plantTime ?? 0}
+              onChange={e => onChange({ plantTime: Number(e.target.value) || undefined })} />
+          </Field>
+        )}
+
+        {isZonePlaceItem && (
+          <Field label="Item Template ID" tooltip="The 24-char hex ID of the item the player must place at the zone.">
+            <input className="input-field text-sm font-mono" value={objective.plantItemTpl || ''}
+              onChange={e => onChange({ plantItemTpl: e.target.value || undefined })}
+              placeholder="24-char hex" maxLength={24} />
           </Field>
         )}
       </div>
@@ -1781,6 +1859,172 @@ function CustomPocketEditor({ definition, onChange }: {
           </div>
         ))}
       </div>
+    </div>
+  )
+}
+
+// ==================== Zone Manager ====================
+
+function createDefaultZone(): QuestZone {
+  return {
+    zoneId: '',
+    zoneName: '',
+    zoneLocation: '',
+    zoneType: 'visit',
+    flareType: '',
+    position: { x: '0', y: '0', z: '0' },
+    rotation: { x: '0', y: '0', z: '0', w: '1' },
+    scale: { x: '2', y: '2', z: '2' },
+  }
+}
+
+function ZoneManager({ zones, onChange }: {
+  zones: QuestZone[]
+  onChange: (zones: QuestZone[]) => void
+}) {
+  const [expanded, setExpanded] = useState<number | null>(null)
+
+  const addZone = () => {
+    const z = createDefaultZone()
+    onChange([...zones, z])
+    setExpanded(zones.length)
+  }
+
+  const removeZone = (i: number) => {
+    onChange(zones.filter((_, idx) => idx !== i))
+    if (expanded === i) setExpanded(null)
+  }
+
+  const updateZone = (i: number, updates: Partial<QuestZone>) => {
+    onChange(zones.map((z, idx) => idx === i ? { ...z, ...updates } : z))
+  }
+
+  const updateVec = (i: number, field: 'position' | 'rotation' | 'scale', axis: string, val: string) => {
+    const zone = zones[i]
+    onChange(zones.map((z, idx) => idx === i ? { ...z, [field]: { ...zone[field], [axis]: val } } : z))
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-tarkov-text-dim">
+          Define physical trigger zones on the map. Use F12 in-game (WTT-ClientCommonLib) to position them visually.
+        </p>
+        <button onClick={addZone} className="btn-primary text-sm flex items-center gap-1.5">
+          <Plus size={14} /> Add Zone
+        </button>
+      </div>
+
+      {zones.length === 0 && (
+        <div className="bg-tarkov-surface border border-tarkov-border rounded-lg px-4 py-3 text-sm text-tarkov-text-dim flex items-center gap-2">
+          <HelpCircle size={14} className="text-tarkov-accent shrink-0" />
+          No zones defined. Zones are required for zone_visit, zone_kill, and zone_place_item objectives. Use the in-game F12 editor to place zones, then copy the coordinates here.
+        </div>
+      )}
+
+      {zones.map((zone, i) => {
+        const isExp = expanded === i
+        const hasId = zone.zoneId.trim().length > 0
+        return (
+          <div key={i} className="bg-tarkov-surface border border-tarkov-border rounded-lg overflow-hidden">
+            <div
+              className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-tarkov-bg/30 transition-colors"
+              onClick={() => setExpanded(isExp ? null : i)}
+            >
+              <MapPin size={14} className="text-tarkov-accent shrink-0" />
+              <div className="flex-1 min-w-0">
+                <span className="text-sm font-medium font-mono text-tarkov-text truncate">
+                  {hasId ? zone.zoneId : <span className="text-tarkov-text-dim italic">Unnamed Zone</span>}
+                </span>
+                {zone.zoneLocation && (
+                  <span className="ml-2 text-xs text-tarkov-text-dim">{zone.zoneLocation} · {zone.zoneType}</span>
+                )}
+              </div>
+              <button onClick={e => { e.stopPropagation(); removeZone(i) }}
+                className="text-tarkov-error hover:text-tarkov-error/80 shrink-0">
+                <Trash2 size={14} />
+              </button>
+              {isExp ? <ChevronUp size={14} className="text-tarkov-text-dim" /> : <ChevronDown size={14} className="text-tarkov-text-dim" />}
+            </div>
+
+            {isExp && (
+              <div className="px-4 pb-4 space-y-4 border-t border-tarkov-border/50 pt-3">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <Field label="Zone ID" tooltip="Unique identifier used in quest objectives' zoneId field.">
+                    <input className="input-field text-sm font-mono" value={zone.zoneId}
+                      onChange={e => updateZone(i, { zoneId: e.target.value })}
+                      placeholder="my_zone_woods_01" />
+                  </Field>
+                  <Field label="Zone Name" tooltip="Display name (can match Zone ID).">
+                    <input className="input-field text-sm" value={zone.zoneName}
+                      onChange={e => updateZone(i, { zoneName: e.target.value })}
+                      placeholder="e.g. Checkpoint Alfa" />
+                  </Field>
+                  <Field label="Map Location" tooltip="The SPT location ID for the map this zone is on.">
+                    <select className="input-field text-sm" value={zone.zoneLocation}
+                      onChange={e => updateZone(i, { zoneLocation: e.target.value })}>
+                      <option value="">-- Select Map --</option>
+                      {MAP_LOCATIONS.filter(l => l.value !== 'any').map(l => (
+                        <option key={l.value} value={l.value}>{l.label}</option>
+                      ))}
+                    </select>
+                  </Field>
+                  <Field label="Zone Type" tooltip="How this zone is used in-game.">
+                    <select className="input-field text-sm" value={zone.zoneType}
+                      onChange={e => updateZone(i, { zoneType: e.target.value })}>
+                      {ZONE_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                    </select>
+                  </Field>
+                </div>
+
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold text-tarkov-text-dim uppercase tracking-wide">Position (X / Y / Z)</p>
+                  <div className="grid grid-cols-3 gap-2">
+                    {(['x', 'y', 'z'] as const).map(axis => (
+                      <div key={axis}>
+                        <label className="label text-[11px]">{axis.toUpperCase()}</label>
+                        <input className="input-field text-sm font-mono" value={zone.position[axis]}
+                          onChange={e => updateVec(i, 'position', axis, e.target.value)} placeholder="0" />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold text-tarkov-text-dim uppercase tracking-wide">Scale (X / Y / Z)</p>
+                  <div className="grid grid-cols-3 gap-2">
+                    {(['x', 'y', 'z'] as const).map(axis => (
+                      <div key={axis}>
+                        <label className="label text-[11px]">{axis.toUpperCase()}</label>
+                        <input className="input-field text-sm font-mono" value={zone.scale[axis]}
+                          onChange={e => updateVec(i, 'scale', axis, e.target.value)} placeholder="2" />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold text-tarkov-text-dim uppercase tracking-wide">Rotation (X / Y / Z / W)</p>
+                  <div className="grid grid-cols-4 gap-2">
+                    {(['x', 'y', 'z', 'w'] as const).map(axis => (
+                      <div key={axis}>
+                        <label className="label text-[11px]">{axis.toUpperCase()}</label>
+                        <input className="input-field text-sm font-mono" value={zone.rotation[axis]}
+                          onChange={e => updateVec(i, 'rotation', axis, e.target.value)} placeholder={axis === 'w' ? '1' : '0'} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="bg-tarkov-bg/40 border border-tarkov-border/50 rounded px-3 py-2 text-xs text-tarkov-text-dim flex items-start gap-2">
+                  <HelpCircle size={12} className="text-tarkov-accent shrink-0 mt-0.5" />
+                  Tip: Use the <strong>F12 in-game editor</strong> (requires WTT-ClientCommonLib) to visually place and resize zones, then copy the generated coordinates here.
+                </div>
+              </div>
+            )}
+          </div>
+        )
+      })}
     </div>
   )
 }

@@ -3,7 +3,7 @@ import { isDogtagId, normalizeDogtagId } from './types'
 
 const HEX_24 = /^[0-9a-fA-F]{24}$/
 const VALID_CURRENCIES = ['RUB', 'USD', 'EUR']
-const VALID_OBJECTIVE_TYPES = ['kill_enemy', 'handover_item', 'handover_fir_item', 'survive_location', 'extract_location']
+const VALID_OBJECTIVE_TYPES = ['kill_enemy', 'handover_item', 'handover_fir_item', 'survive_location', 'extract_location', 'zone_visit', 'zone_kill', 'zone_place_item']
 const VALID_ROTATION_TYPES = ['daily', 'weekly']
 
 export function validateTrader(trader: TraderDefinition): ValidationError[] {
@@ -222,6 +222,12 @@ export function validateQuestPack(pack: QuestPackDefinition, traderId: string): 
       if ((obj.type === 'survive_location' || obj.type === 'extract_location') && !obj.location) {
         errors.push({ field: `quest.${i}.obj.${j}.location`, message: `${objPrefix}: Location is required.` })
       }
+      if ((obj.type === 'zone_visit' || obj.type === 'zone_kill' || obj.type === 'zone_place_item') && !obj.zoneId?.trim()) {
+        errors.push({ field: `quest.${i}.obj.${j}.zoneId`, message: `${objPrefix}: Zone ID is required for ${obj.type}.` })
+      }
+      if (obj.type === 'zone_place_item' && !obj.plantItemTpl?.trim()) {
+        errors.push({ field: `quest.${i}.obj.${j}.plantItemTpl`, message: `${objPrefix}: Item Template ID is required for zone_place_item.` })
+      }
 
       // Advanced condition validation
       if (obj.minDistance !== undefined && obj.minDistance !== null && (obj.minDistance < 0 || !Number.isFinite(obj.minDistance))) {
@@ -407,6 +413,9 @@ export function buildQuestExportJson(pack: QuestPackDefinition): object | null {
           if (obj.bodyPart?.length) o.bodyPart = obj.bodyPart
           if (obj.requiredExtract) o.requiredExtract = obj.requiredExtract
           if (obj.oneSessionOnly) o.oneSessionOnly = true
+          if (obj.zoneId) o.zoneId = obj.zoneId
+          if (obj.plantTime != null) o.plantTime = obj.plantTime
+          if (obj.plantItemTpl) o.plantItemTpl = obj.plantItemTpl
           return o
         }),
         rewards: buildRewardsJson(q.rewards),
@@ -416,6 +425,10 @@ export function buildQuestExportJson(pack: QuestPackDefinition): object | null {
     })
   } else {
     output.storyQuests = []
+  }
+
+  if (pack.zones && pack.zones.length > 0) {
+    output.zones = pack.zones
   }
 
   if (pack.rotatingQuests.length > 0) {

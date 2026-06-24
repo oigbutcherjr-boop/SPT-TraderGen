@@ -165,6 +165,9 @@ public class TraderGenPlugin(
             }
         }
 
+        // Register custom zones from all quest packs
+        await RegisterQuestZones(questPacks, modPath);
+
         if (totalStoryQuests > 0)
         {
             // Register story quests into SPT database
@@ -188,6 +191,56 @@ public class TraderGenPlugin(
                 $"[TraderGen] {questPacksFailed} quest pack(s) failed validation or building.",
                 LogTextColor.Yellow);
         }
+    }
+
+    private async Task RegisterQuestZones(List<QuestLoader.LoadedQuestPack> questPacks, string modPath)
+    {
+        var allZones = questPacks
+            .SelectMany(p => p.Definition.Zones)
+            .ToList();
+
+        if (allZones.Count == 0)
+            return;
+
+        // Write zone JSON into db/CustomQuestZones/ so WTT can pick them up
+        var zoneOutputDir = Path.Combine(modPath, "db", "CustomQuestZones");
+        if (Directory.Exists(zoneOutputDir))
+            Directory.Delete(zoneOutputDir, true);
+        Directory.CreateDirectory(zoneOutputDir);
+
+        var zoneJsonOpts = new System.Text.Json.JsonSerializerOptions
+        {
+            WriteIndented = true,
+        };
+
+        // WTT loads files as List<CustomQuestZone> — write one file per pack
+        foreach (var pack in questPacks)
+        {
+            if (pack.Definition.Zones.Count == 0) continue;
+            var packName = Path.GetFileName(pack.PackFolder);
+            var zoneFile = Path.Combine(zoneOutputDir, $"{packName}_zones.json");
+
+            var wttZones = pack.Definition.Zones.Select(z => new WTTServerCommonLib.Models.CustomQuestZone
+            {
+                ZoneId = z.ZoneId,
+                ZoneName = z.ZoneName,
+                ZoneLocation = z.ZoneLocation.ToLowerInvariant(),
+                ZoneType = z.ZoneType,
+                FlareType = z.FlareType,
+                Position = new WTTServerCommonLib.Models.ZoneTransform(z.Position.X, z.Position.Y, z.Position.Z),
+                Rotation = new WTTServerCommonLib.Models.ZoneTransform(z.Rotation.X, z.Rotation.Y, z.Rotation.Z, z.Rotation.W),
+                Scale = new WTTServerCommonLib.Models.ZoneTransform(z.Scale.X, z.Scale.Y, z.Scale.Z),
+            }).ToList();
+
+            File.WriteAllText(zoneFile, System.Text.Json.JsonSerializer.Serialize(wttZones, zoneJsonOpts));
+        }
+
+        var assembly = Assembly.GetExecutingAssembly();
+        await wttCommon.CustomQuestZoneService.CreateCustomQuestZones(assembly);
+
+        logger.LogWithColor(
+            $"[TraderGen] Registered {allZones.Count} quest zone(s) via WTT CustomQuestZoneService.",
+            LogTextColor.Green);
     }
 
     private void SetupRepeatableQuests(List<(List<Models.RotatingQuestTemplate> Templates, string TraderId, string PackFolder)> allTemplates)

@@ -12,6 +12,14 @@ public static class QuestValidator
         "kill_enemy",
         "survive_location",
         "extract_location",
+        "zone_visit",
+        "zone_kill",
+        "zone_place_item",
+    };
+
+    private static readonly HashSet<string> ValidZoneTypes = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "visit", "placeitem", "transition", "flare", "salvagehint",
     };
 
     private static readonly HashSet<string> ValidEnemyTargets = new(StringComparer.OrdinalIgnoreCase)
@@ -82,6 +90,22 @@ public static class QuestValidator
             var template = pack.RotatingQuests[i];
             var tPrefix = $"{prefix} rotatingQuests[{i}]";
             ValidateRotatingTemplate(template, traderId, tPrefix, seenIds, errors);
+        }
+
+        // Validate zone definitions
+        var seenZoneIds = new HashSet<string>();
+        for (var i = 0; i < pack.Zones.Count; i++)
+        {
+            var zone = pack.Zones[i];
+            var zPrefix = $"{prefix} zones[{i}]";
+            if (string.IsNullOrWhiteSpace(zone.ZoneId))
+                errors.Add($"{zPrefix}: 'zoneId' is required.");
+            else if (!seenZoneIds.Add(zone.ZoneId))
+                errors.Add($"{zPrefix}: Duplicate zoneId '{zone.ZoneId}'.");
+            if (string.IsNullOrWhiteSpace(zone.ZoneLocation))
+                errors.Add($"{zPrefix}: 'zoneLocation' is required.");
+            if (!ValidZoneTypes.Contains(zone.ZoneType))
+                errors.Add($"{zPrefix}: Invalid 'zoneType' '{zone.ZoneType}'. Valid: {string.Join(", ", ValidZoneTypes)}");
         }
 
         return errors;
@@ -188,6 +212,17 @@ public static class QuestValidator
                     errors.Add($"{prefix}: 'location' is required for {obj.Type} objectives.");
                 else if (!ValidLocations.Contains(obj.Location) || obj.Location.Equals("any", StringComparison.OrdinalIgnoreCase))
                     errors.Add($"{prefix}: '{obj.Type}' requires a specific location, not 'any'. Valid: {string.Join(", ", ValidLocations.Where(l => !l.Equals("any", StringComparison.OrdinalIgnoreCase)))}");
+                break;
+
+            case "zone_visit":
+            case "zone_kill":
+            case "zone_place_item":
+                if (string.IsNullOrWhiteSpace(obj.ZoneId))
+                    errors.Add($"{prefix}: 'zoneId' is required for {obj.Type} objectives.");
+                if (obj.Type.Equals("zone_kill", StringComparison.OrdinalIgnoreCase) && string.IsNullOrWhiteSpace(obj.Target))
+                    errors.Add($"{prefix}: 'target' is required for zone_kill objectives.");
+                if (obj.Type.Equals("zone_place_item", StringComparison.OrdinalIgnoreCase) && string.IsNullOrWhiteSpace(obj.PlantItemTpl))
+                    errors.Add($"{prefix}: 'plantItemTpl' is required for zone_place_item objectives.");
                 break;
         }
 

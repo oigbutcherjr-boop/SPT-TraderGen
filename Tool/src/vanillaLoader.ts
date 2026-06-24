@@ -142,5 +142,6 @@ export async function loadVanillaQuestPackByTraderId(traderId: string): Promise<
   return {
     storyQuests: quests,
     rotatingQuests: [],
+    zones: [],
   }
 }
