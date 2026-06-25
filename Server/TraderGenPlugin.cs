@@ -140,6 +140,7 @@ public class TraderGenPlugin(
                     var pocketId = pocketInjector.Inject(quest.Rewards.CustomPocket, traderGenPocketsDir);
                     quest.Rewards.Pockets = pocketId;
                     quest.Rewards.CustomPocket = null;
+                    logger.LogWithColor($"[TraderGen] OnLoad injected pocket template '{pocketId}' into item DB (before migrations).", LogTextColor.Cyan);
                 }
             }
 
@@ -167,6 +168,12 @@ public class TraderGenPlugin(
 
         // Register custom zones from all quest packs
         await RegisterQuestZones(questPacks, modPath);
+
+        // Build the quest->custom pocket map and enable the server-side fix that
+        // restores the correct pocket TPL every time the profile is served to the client.
+        PocketServeFixPatch.BuildMap(modPath);
+        PocketServeFixPatch.SetDependencies(profileHelper);
+        new PocketServeFixPatch().Enable();
 
         if (totalStoryQuests > 0)
         {

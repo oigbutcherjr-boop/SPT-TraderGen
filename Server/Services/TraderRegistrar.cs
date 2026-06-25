@@ -242,9 +242,9 @@ public class TraderRegistrar(
             {
                 availability = trader.InsuranceEnabled,
                 min_payment = 0,
-                min_return_hour = 0,
-                max_return_hour = 1,
-                max_storage_time = 144,
+                min_return_hour = trader.InsuranceMinReturnHour,
+                max_return_hour = trader.InsuranceMaxReturnHour,
+                max_storage_time = trader.InsuranceMaxStorageTime,
                 excluded_category = Array.Empty<string>(),
             },
             isCanTransferItems = false,
@@ -295,7 +295,7 @@ public class TraderRegistrar(
                     minStanding = ll.MinStanding,
                     buy_price_coef = ll.BuyPriceCoef,
                     repair_price_coef = 150,
-                    insurance_price_coef = 10,
+                    insurance_price_coef = ll.InsurancePriceCoef,
                     exchange_price_coef = 0,
                     heal_price_coef = 0,
                 })

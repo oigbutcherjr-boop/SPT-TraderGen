@@ -141,8 +141,18 @@ export function buildExportJson(trader: TraderDefinition): object {
     refreshTimeMin: trader.refreshTimeMin,
     refreshTimeMax: trader.refreshTimeMax,
     insuranceEnabled: trader.insuranceEnabled,
+    insuranceMinReturnHour: trader.insuranceMinReturnHour,
+    insuranceMaxReturnHour: trader.insuranceMaxReturnHour,
+    insuranceMaxStorageTime: trader.insuranceMaxStorageTime,
     repairEnabled: trader.repairEnabled,
-    loyaltyLevels: trader.loyaltyLevels,
+    loyaltyLevels: trader.loyaltyLevels.map(ll => ({
+      level: ll.level,
+      minLevel: ll.minLevel,
+      minSalesSum: ll.minSalesSum,
+      minStanding: ll.minStanding,
+      buyPriceCoef: ll.buyPriceCoef,
+      insurancePriceCoef: ll.insurancePriceCoef ?? 10,
+    })),
     assort: trader.assort.map(item => {
       const out: Record<string, unknown> = {
         itemTpl: item.itemTpl,

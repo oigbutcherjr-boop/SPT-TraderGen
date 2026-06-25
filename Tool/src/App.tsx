@@ -340,6 +340,7 @@ export default function App() {
         minSalesSum: maxLevel * 500000,
         minStanding: 0,
         buyPriceCoef: 40 + maxLevel * 5,
+        insurancePriceCoef: 10,
       }
       return { ...prev, loyaltyLevels: [...prev.loyaltyLevels, newLl] }
     })
@@ -757,6 +758,7 @@ export default function App() {
         {activeTab === 'loyalty' && (
           <LoyaltyTab
             levels={trader.loyaltyLevels}
+            insuranceEnabled={trader.insuranceEnabled}
             onAdd={addLoyaltyLevel}
             onRemove={removeLoyaltyLevel}
             onUpdate={updateLoyaltyLevel}
@@ -965,6 +967,23 @@ function GeneralTab({ trader, update, hasError, errorsByField }: {
             tooltip="Whether this trader offers item insurance. Most custom traders leave this off." />
         </div>
 
+        {trader.insuranceEnabled && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4 p-4 bg-amber-500/10 border border-amber-500/30 rounded-lg">
+            <Field label="Min Return Hours" tooltip="Minimum hours before insured items are returned to the player. Default: 0.">
+              <input type="number" className="input-field" value={trader.insuranceMinReturnHour}
+                onChange={e => update('insuranceMinReturnHour', Number(e.target.value))} min={0} />
+            </Field>
+            <Field label="Max Return Hours" tooltip="Maximum hours before insured items are returned. Actual return time is random between min and max. Default: 1.">
+              <input type="number" className="input-field" value={trader.insuranceMaxReturnHour}
+                onChange={e => update('insuranceMaxReturnHour', Number(e.target.value))} min={0} />
+            </Field>
+            <Field label="Max Storage Time (hours)" tooltip="How long insured items are stored before being deleted if not retrieved. Default: 144 (6 days).">
+              <input type="number" className="input-field" value={trader.insuranceMaxStorageTime}
+                onChange={e => update('insuranceMaxStorageTime', Number(e.target.value))} min={1} />
+            </Field>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
           <Field label="Refresh Time Min (seconds)" tooltip="Minimum time in seconds before the trader restocks their items. Default: 1800 (30 min).">
             <input type="number" className="input-field" value={trader.refreshTimeMin}
@@ -1079,8 +1098,9 @@ function BuyCategoriesEditor({ categories, onChange }: {
 }
 
 /* ===== LOYALTY TAB ===== */
-function LoyaltyTab({ levels, onAdd, onRemove, onUpdate }: {
+function LoyaltyTab({ levels, insuranceEnabled, onAdd, onRemove, onUpdate }: {
   levels: LoyaltyLevel[]
+  insuranceEnabled: boolean
   onAdd: () => void
   onRemove: (i: number) => void
   onUpdate: (i: number, key: keyof LoyaltyLevel, value: number) => void
@@ -1135,6 +1155,14 @@ function LoyaltyTab({ levels, onAdd, onRemove, onUpdate }: {
                   onChange={e => onUpdate(i, 'buyPriceCoef', Number(e.target.value))} min={0} max={100} />
               </Field>
             </div>
+            {insuranceEnabled && (
+              <div className="mt-3 pt-3 border-t border-tarkov-border">
+                <Field label="Insurance Price Coef" tooltip="Scales the insurance cost at this loyalty tier. Higher = more expensive insurance. Vanilla Therapist uses 20 at LL1 lowering to 10 at LL2.">
+                  <input type="number" className="input-field w-32" value={ll.insurancePriceCoef ?? 10}
+                    onChange={e => onUpdate(i, 'insurancePriceCoef', Number(e.target.value))} min={0} />
+                </Field>
+              </div>
+            )}
           </div>
         ))}
       </div>

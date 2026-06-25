@@ -21,6 +21,9 @@ export interface TraderDefinition {
   refreshTimeMin: number
   refreshTimeMax: number
   insuranceEnabled: boolean
+  insuranceMinReturnHour: number
+  insuranceMaxReturnHour: number
+  insuranceMaxStorageTime: number
   repairEnabled: boolean
   buyCategories?: string[]
   loyaltyLevels: LoyaltyLevel[]
@@ -33,6 +36,7 @@ export interface LoyaltyLevel {
   minSalesSum: number
   minStanding: number
   buyPriceCoef: number
+  insurancePriceCoef: number
 }
 
 export interface AssortChildItem {
@@ -337,9 +341,12 @@ export function createDefaultTrader(): TraderDefinition {
     refreshTimeMin: 1800,
     refreshTimeMax: 7200,
     insuranceEnabled: false,
+    insuranceMinReturnHour: 0,
+    insuranceMaxReturnHour: 1,
+    insuranceMaxStorageTime: 144,
     repairEnabled: false,
     loyaltyLevels: [
-      { level: 1, minLevel: 1, minSalesSum: 0, minStanding: 0, buyPriceCoef: 40 },
+      { level: 1, minLevel: 1, minSalesSum: 0, minStanding: 0, buyPriceCoef: 40, insurancePriceCoef: 10 },
     ],
     assort: [],
   }

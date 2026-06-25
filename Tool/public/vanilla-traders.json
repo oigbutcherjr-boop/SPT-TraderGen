@@ -15,10 +15,14 @@
         "minLevel": 1,
         "minSalesSum": 0,
         "minStanding": 0,
-        "buyPriceCoef": 0
+        "buyPriceCoef": 0,
+        "insurancePriceCoef": 10
       }
     ],
     "insuranceEnabled": false,
+    "insuranceMinReturnHour": 0,
+    "insuranceMaxReturnHour": 0,
+    "insuranceMaxStorageTime": 48,
     "repairEnabled": false,
     "balanceRub": 7000000,
     "balanceDol": 0,
@@ -46,17 +50,22 @@
         "minLevel": 1,
         "minSalesSum": 0,
         "minStanding": 0,
-        "buyPriceCoef": 60
+        "buyPriceCoef": 60,
+        "insurancePriceCoef": 30
       },
       {
         "level": 2,
         "minLevel": 1,
         "minSalesSum": 0,
         "minStanding": 6,
-        "buyPriceCoef": 60
+        "buyPriceCoef": 60,
+        "insurancePriceCoef": 30
       }
     ],
     "insuranceEnabled": false,
+    "insuranceMinReturnHour": 30,
+    "insuranceMaxReturnHour": 80,
+    "insuranceMaxStorageTime": 50,
     "repairEnabled": false,
     "balanceRub": 7000000,
     "balanceDol": 0,
@@ -103,31 +112,38 @@
         "minLevel": 1,
         "minSalesSum": 0,
         "minStanding": 0,
-        "buyPriceCoef": 40
+        "buyPriceCoef": 40,
+        "insurancePriceCoef": 10
       },
       {
         "level": 2,
         "minLevel": 15,
         "minSalesSum": 560000,
         "minStanding": 0.2,
-        "buyPriceCoef": 40
+        "buyPriceCoef": 40,
+        "insurancePriceCoef": 8
       },
       {
         "level": 3,
         "minLevel": 22,
         "minSalesSum": 1125000,
         "minStanding": 0.35,
-        "buyPriceCoef": 40
+        "buyPriceCoef": 40,
+        "insurancePriceCoef": 6
       },
       {
         "level": 4,
         "minLevel": 33,
         "minSalesSum": 1725000,
         "minStanding": 0.5,
-        "buyPriceCoef": 40
+        "buyPriceCoef": 40,
+        "insurancePriceCoef": 4
       }
     ],
     "insuranceEnabled": false,
+    "insuranceMinReturnHour": 24,
+    "insuranceMaxReturnHour": 36,
+    "insuranceMaxStorageTime": 72,
     "repairEnabled": false,
     "balanceRub": 7000000,
     "balanceDol": 0,
@@ -3821,10 +3837,14 @@
         "minLevel": 1,
         "minSalesSum": 0,
         "minStanding": 0,
-        "buyPriceCoef": 0
+        "buyPriceCoef": 0,
+        "insurancePriceCoef": 10
       }
     ],
     "insuranceEnabled": false,
+    "insuranceMinReturnHour": 0,
+    "insuranceMaxReturnHour": 0,
+    "insuranceMaxStorageTime": 48,
     "repairEnabled": false,
     "balanceRub": 7000000,
     "balanceDol": 0,
@@ -3852,31 +3872,38 @@
         "minLevel": 1,
         "minSalesSum": 0,
         "minStanding": 0,
-        "buyPriceCoef": 44
+        "buyPriceCoef": 44,
+        "insurancePriceCoef": 10
       },
       {
         "level": 2,
         "minLevel": 20,
         "minSalesSum": 750000,
         "minStanding": 0.15,
-        "buyPriceCoef": 44
+        "buyPriceCoef": 44,
+        "insurancePriceCoef": 10
       },
       {
         "level": 3,
         "minLevel": 30,
         "minSalesSum": 1600000,
         "minStanding": 0.3,
-        "buyPriceCoef": 44
+        "buyPriceCoef": 44,
+        "insurancePriceCoef": 10
       },
       {
         "level": 4,
         "minLevel": 40,
         "minSalesSum": 2500000,
         "minStanding": 0.6,
-        "buyPriceCoef": 44
+        "buyPriceCoef": 44,
+        "insurancePriceCoef": 10
       }
     ],
     "insuranceEnabled": false,
+    "insuranceMinReturnHour": 24,
+    "insuranceMaxReturnHour": 36,
+    "insuranceMaxStorageTime": 72,
     "repairEnabled": true,
     "balanceRub": 7000000,
     "balanceDol": 0,
@@ -9977,31 +10004,38 @@
         "minLevel": 1,
         "minSalesSum": 0,
         "minStanding": 0,
-        "buyPriceCoef": 55
+        "buyPriceCoef": 55,
+        "insurancePriceCoef": 5
       },
       {
         "level": 2,
         "minLevel": 14,
         "minSalesSum": 11000,
         "minStanding": 0,
-        "buyPriceCoef": 55
+        "buyPriceCoef": 55,
+        "insurancePriceCoef": 0
       },
       {
         "level": 3,
         "minLevel": 23,
         "minSalesSum": 25000,
         "minStanding": 0.3,
-        "buyPriceCoef": 55
+        "buyPriceCoef": 55,
+        "insurancePriceCoef": 0
       },
       {
         "level": 4,
         "minLevel": 37,
         "minSalesSum": 32000,
         "minStanding": 0.6,
-        "buyPriceCoef": 55
+        "buyPriceCoef": 55,
+        "insurancePriceCoef": 0
       }
     ],
     "insuranceEnabled": false,
+    "insuranceMinReturnHour": 10,
+    "insuranceMaxReturnHour": 20,
+    "insuranceMaxStorageTime": 24,
     "repairEnabled": false,
     "balanceRub": 7000000,
     "balanceDol": 700000,
@@ -19370,31 +19404,38 @@
         "minLevel": 1,
         "minSalesSum": 0,
         "minStanding": 0,
-        "buyPriceCoef": 50
+        "buyPriceCoef": 50,
+        "insurancePriceCoef": 10
       },
       {
         "level": 2,
         "minLevel": 15,
         "minSalesSum": 750000,
         "minStanding": 0.2,
-        "buyPriceCoef": 50
+        "buyPriceCoef": 50,
+        "insurancePriceCoef": 10
       },
       {
         "level": 3,
         "minLevel": 26,
         "minSalesSum": 1500000,
         "minStanding": 0.35,
-        "buyPriceCoef": 50
+        "buyPriceCoef": 50,
+        "insurancePriceCoef": 10
       },
       {
         "level": 4,
         "minLevel": 36,
         "minSalesSum": 2300000,
         "minStanding": 0.5,
-        "buyPriceCoef": 50
+        "buyPriceCoef": 50,
+        "insurancePriceCoef": 10
       }
     ],
     "insuranceEnabled": true,
+    "insuranceMinReturnHour": 24,
+    "insuranceMaxReturnHour": 36,
+    "insuranceMaxStorageTime": 96,
     "repairEnabled": true,
     "balanceRub": 7000000,
     "balanceDol": 0,
@@ -23624,31 +23665,38 @@
         "minLevel": 1,
         "minSalesSum": 0,
         "minStanding": 0,
-        "buyPriceCoef": 38
+        "buyPriceCoef": 38,
+        "insurancePriceCoef": 10
       },
       {
         "level": 2,
         "minLevel": 17,
         "minSalesSum": 750000,
         "minStanding": 0,
-        "buyPriceCoef": 38
+        "buyPriceCoef": 38,
+        "insurancePriceCoef": 10
       },
       {
         "level": 3,
         "minLevel": 32,
         "minSalesSum": 1600000,
         "minStanding": 0.3,
-        "buyPriceCoef": 38
+        "buyPriceCoef": 38,
+        "insurancePriceCoef": 10
       },
       {
         "level": 4,
         "minLevel": 42,
         "minSalesSum": 2500000,
         "minStanding": 0.6,
-        "buyPriceCoef": 38
+        "buyPriceCoef": 38,
+        "insurancePriceCoef": 10
       }
     ],
     "insuranceEnabled": false,
+    "insuranceMinReturnHour": 24,
+    "insuranceMaxReturnHour": 36,
+    "insuranceMaxStorageTime": 72,
     "repairEnabled": false,
     "balanceRub": 7000000,
     "balanceDol": 0,
@@ -25554,31 +25602,38 @@
         "minLevel": 1,
         "minSalesSum": 0,
         "minStanding": 0,
-        "buyPriceCoef": 50
+        "buyPriceCoef": 50,
+        "insurancePriceCoef": 10
       },
       {
         "level": 2,
         "minLevel": 15,
         "minSalesSum": 0,
         "minStanding": 0.25,
-        "buyPriceCoef": 44
+        "buyPriceCoef": 44,
+        "insurancePriceCoef": 10
       },
       {
         "level": 3,
         "minLevel": 25,
         "minSalesSum": 0,
         "minStanding": 0.5,
-        "buyPriceCoef": 44
+        "buyPriceCoef": 44,
+        "insurancePriceCoef": 10
       },
       {
         "level": 4,
         "minLevel": 35,
         "minSalesSum": 0,
         "minStanding": 1.2,
-        "buyPriceCoef": 38
+        "buyPriceCoef": 38,
+        "insurancePriceCoef": 10
       }
     ],
     "insuranceEnabled": false,
+    "insuranceMinReturnHour": 0,
+    "insuranceMaxReturnHour": 0,
+    "insuranceMaxStorageTime": 48,
     "repairEnabled": false,
     "balanceRub": 7000000,
     "balanceDol": 0,
@@ -27949,31 +28004,38 @@
         "minLevel": 1,
         "minSalesSum": 0,
         "minStanding": 0,
-        "buyPriceCoef": 51
+        "buyPriceCoef": 51,
+        "insurancePriceCoef": 0
       },
       {
         "level": 2,
         "minLevel": 15,
         "minSalesSum": 800000,
         "minStanding": 0.2,
-        "buyPriceCoef": 51
+        "buyPriceCoef": 51,
+        "insurancePriceCoef": 0
       },
       {
         "level": 3,
         "minLevel": 28,
         "minSalesSum": 1600000,
         "minStanding": 0.4,
-        "buyPriceCoef": 51
+        "buyPriceCoef": 51,
+        "insurancePriceCoef": 0
       },
       {
         "level": 4,
         "minLevel": 38,
         "minSalesSum": 2600000,
         "minStanding": 0.75,
-        "buyPriceCoef": 51
+        "buyPriceCoef": 51,
+        "insurancePriceCoef": 0
       }
     ],
     "insuranceEnabled": false,
+    "insuranceMinReturnHour": 0,
+    "insuranceMaxReturnHour": 0,
+    "insuranceMaxStorageTime": 24,
     "repairEnabled": true,
     "balanceRub": 7000000,
     "balanceDol": 0,
@@ -31986,10 +32048,14 @@
         "minLevel": 1,
         "minSalesSum": 0,
         "minStanding": 0,
-        "buyPriceCoef": 0
+        "buyPriceCoef": 0,
+        "insurancePriceCoef": 10
       }
     ],
     "insuranceEnabled": false,
+    "insuranceMinReturnHour": 0,
+    "insuranceMaxReturnHour": 0,
+    "insuranceMaxStorageTime": 48,
     "repairEnabled": false,
     "balanceRub": 7000000,
     "balanceDol": 0,
@@ -32017,31 +32083,38 @@
         "minLevel": 0,
         "minSalesSum": 0,
         "minStanding": 0,
-        "buyPriceCoef": 37
+        "buyPriceCoef": 37,
+        "insurancePriceCoef": 20
       },
       {
         "level": 2,
         "minLevel": 13,
         "minSalesSum": 400000,
         "minStanding": 0.15,
-        "buyPriceCoef": 37
+        "buyPriceCoef": 37,
+        "insurancePriceCoef": 10
       },
       {
         "level": 3,
         "minLevel": 24,
         "minSalesSum": 700000,
         "minStanding": 0.3,
-        "buyPriceCoef": 37
+        "buyPriceCoef": 37,
+        "insurancePriceCoef": 10
       },
       {
         "level": 4,
         "minLevel": 35,
         "minSalesSum": 900000,
         "minStanding": 0.6,
-        "buyPriceCoef": 37
+        "buyPriceCoef": 37,
+        "insurancePriceCoef": 10
       }
     ],
     "insuranceEnabled": true,
+    "insuranceMinReturnHour": 10,
+    "insuranceMaxReturnHour": 20,
+    "insuranceMaxStorageTime": 144,
     "repairEnabled": false,
     "balanceRub": 7000000,
     "balanceDol": 0,

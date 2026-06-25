@@ -52,6 +52,7 @@ function convertBase(base, locales, refreshTimes) {
     minSalesSum: typeof l.minSalesSum === 'number' ? l.minSalesSum : 0,
     minStanding: typeof l.minStanding === 'number' ? l.minStanding : 0,
     buyPriceCoef: typeof l.buy_price_coef === 'number' ? l.buy_price_coef : 40,
+    insurancePriceCoef: typeof l.insurance_price_coef === 'number' ? l.insurance_price_coef : 10,
   }))
 
   const refresh = refreshTimes[id] || { min: 1800, max: 7200 }
@@ -82,8 +83,11 @@ function convertBase(base, locales, refreshTimes) {
     refreshTimeMin: refresh.min,
     refreshTimeMax: refresh.max,
     insuranceEnabled: base.insurance?.availability === true,
+    insuranceMinReturnHour: typeof base.insurance?.min_return_hour === 'number' ? base.insurance.min_return_hour : 0,
+    insuranceMaxReturnHour: typeof base.insurance?.max_return_hour === 'number' ? base.insurance.max_return_hour : 1,
+    insuranceMaxStorageTime: typeof base.insurance?.max_storage_time === 'number' ? base.insurance.max_storage_time : 144,
     repairEnabled: base.repair?.availability === true,
-    loyaltyLevels: ll.length > 0 ? ll : [{ level: 1, minLevel: 1, minSalesSum: 0, minStanding: 0, buyPriceCoef: 40 }],
+    loyaltyLevels: ll.length > 0 ? ll : [{ level: 1, minLevel: 1, minSalesSum: 0, minStanding: 0, buyPriceCoef: 40, insurancePriceCoef: 10 }],
     buyCategories: base.items_buy?.category || [],
   }
 }
@@ -197,6 +201,9 @@ function main() {
       currency: traderDef.currency,
       loyaltyLevels: traderDef.loyaltyLevels,
       insuranceEnabled: traderDef.insuranceEnabled,
+      insuranceMinReturnHour: traderDef.insuranceMinReturnHour,
+      insuranceMaxReturnHour: traderDef.insuranceMaxReturnHour,
+      insuranceMaxStorageTime: traderDef.insuranceMaxStorageTime,
       repairEnabled: traderDef.repairEnabled,
       balanceRub: traderDef.balanceRub,
       balanceDol: traderDef.balanceDol,

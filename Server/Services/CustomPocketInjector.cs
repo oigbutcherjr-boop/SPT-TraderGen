@@ -35,7 +35,7 @@ public class CustomPocketInjector(DatabaseService databaseService)
             return existingId;
         }
 
-        var items = databaseService.GetTables().Templates.Items;
+        var items = databaseService.GetItems();
 
         // Clone the default pocket template as a base
         var baseId = new MongoId("557ffd194bdc2d28148b457f");
@@ -51,14 +51,14 @@ public class CustomPocketInjector(DatabaseService databaseService)
             throw new InvalidOperationException("Could not find a base pocket template in the database.");
         }
 
-        var generatedId = GenerateId();
+        var generatedId = GenerateDeterministicId(layoutKey);
 
         // Build new grids from the custom slot definition
         var grids = new List<Grid>();
         for (var i = 0; i < definition.Slots.Count; i++)
         {
             var slot = definition.Slots[i];
-            var slotId = GenerateId();
+            var slotId = GenerateSlotId(generatedId, i);
             grids.Add(new Grid
             {
                 Id = slotId,
@@ -130,9 +130,20 @@ public class CustomPocketInjector(DatabaseService databaseService)
         return sb.ToString();
     }
 
-    private static string GenerateId()
+    // Deterministic slot IDs derived from template ID + slot index
+    private static string GenerateSlotId(string templateId, int index)
     {
-        var bytes = RandomNumberGenerator.GetBytes(12);
-        return Convert.ToHexStringLower(bytes);
+        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(templateId + "_slot_" + index));
+        return Convert.ToHexStringLower(hash[..12]);
+    }
+
+    /// <summary>
+    /// Generates a deterministic 24-hex-char ID from the layout key using SHA256.
+    /// The same pocket layout will always produce the same template ID across restarts.
+    /// </summary>
+    private static string GenerateDeterministicId(string layoutKey)
+    {
+        var hash = SHA256.HashData(Encoding.UTF8.GetBytes("tradergen_pocket_" + layoutKey));
+        return Convert.ToHexStringLower(hash[..12]);
     }
 }

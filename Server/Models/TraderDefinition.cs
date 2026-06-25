@@ -84,6 +84,18 @@ public class TraderDefinition
     [JsonPropertyName("insuranceEnabled")]
     public bool InsuranceEnabled { get; set; } = false;
 
+    // Minimum hours before insured items are returned.
+    [JsonPropertyName("insuranceMinReturnHour")]
+    public int InsuranceMinReturnHour { get; set; } = 0;
+
+    // Maximum hours before insured items are returned.
+    [JsonPropertyName("insuranceMaxReturnHour")]
+    public int InsuranceMaxReturnHour { get; set; } = 1;
+
+    // Hours insured items are stored before deletion.
+    [JsonPropertyName("insuranceMaxStorageTime")]
+    public int InsuranceMaxStorageTime { get; set; } = 144;
+
     // Whether this trader offers repair services (default false).
     [JsonPropertyName("repairEnabled")]
     public bool RepairEnabled { get; set; } = false;
@@ -128,6 +140,10 @@ public class LoyaltyLevelDefinition
     // Higher = trader pays more. Typical range 30-60.
     [JsonPropertyName("buyPriceCoef")]
     public int BuyPriceCoef { get; set; } = 40;
+
+    // Insurance price coefficient for this loyalty tier. Higher = more expensive insurance.
+    [JsonPropertyName("insurancePriceCoef")]
+    public int InsurancePriceCoef { get; set; } = 10;
 }
 
 // Defines a single item or barter offer in the trader's assortment.

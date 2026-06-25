@@ -10,8 +10,11 @@ export interface VanillaTraderEntry {
   description: string
   avatar: string
   currency: string
-  loyaltyLevels: { level: number; minLevel: number; minSalesSum: number; minStanding: number; buyPriceCoef: number }[]
+  loyaltyLevels: { level: number; minLevel: number; minSalesSum: number; minStanding: number; buyPriceCoef: number; insurancePriceCoef: number }[]
   insuranceEnabled: boolean
+  insuranceMinReturnHour: number
+  insuranceMaxReturnHour: number
+  insuranceMaxStorageTime: number
   repairEnabled: boolean
   balanceRub: number
   balanceDol: number
@@ -83,6 +86,9 @@ export async function loadVanillaTraderById(id: string): Promise<TraderDefinitio
     refreshTimeMin: entry.refreshTimeMin,
     refreshTimeMax: entry.refreshTimeMax,
     insuranceEnabled: entry.insuranceEnabled,
+    insuranceMinReturnHour: entry.insuranceMinReturnHour ?? 0,
+    insuranceMaxReturnHour: entry.insuranceMaxReturnHour ?? 1,
+    insuranceMaxStorageTime: entry.insuranceMaxStorageTime ?? 144,
     repairEnabled: entry.repairEnabled,
     buyCategories: entry.buyCategories,
     loyaltyLevels: entry.loyaltyLevels,

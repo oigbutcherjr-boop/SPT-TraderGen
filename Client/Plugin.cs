@@ -25,8 +25,10 @@ namespace TraderGen.Client
                 WeaponBuildExportPatch.Init(Logger);
                 TraderCompoundItemPatch.Init(Logger);
                 QuestPocketRewardPatch.Init(Logger);
+                CustomPocketTemplatePatch.Init(Logger);
                 var harmony = new Harmony("com.tradergen.client");
                 harmony.PatchAll();
+                CustomPocketTemplatePatch.Apply(harmony);
                 ZoneKillConditionPatch.Init(Logger, harmony);
                 Logger.LogInfo("[TraderGen] Client patch loaded.");
             }

@@ -22,7 +22,7 @@ The following features are planned for future updates:
 -
 
 ## Trader Additions/Changes
-- Insurance Service
+- Insurance Service (Ready for next update)
 - Weapon Cleaning
 - Seasonal / Rotating Stock
 
