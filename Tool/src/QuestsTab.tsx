@@ -689,7 +689,7 @@ function StoryQuestEditor({ quest, questIndex, allQuests, onChange, onImportFrom
       {/* Rewards */}
       <div>
         <h3 className="text-sm font-semibold text-tarkov-accent flex items-center gap-2 mb-3">
-          <Star size={16} /> Rewards <span className="text-tarkov-error text-[11px] font-normal">(pockets not working yet)</span>
+          <Star size={16} /> Rewards
         </h3>
         <div className="bg-tarkov-bg rounded-lg p-4 space-y-4">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -988,12 +988,6 @@ function ObjectiveEditor({ objective, onChange }: {
 
   return (
     <div className="px-3 pb-3 space-y-3 border-t border-tarkov-border/50">
-      {isZone && (
-        <div className="flex items-center gap-2 mt-3 px-3 py-2 rounded bg-tarkov-error/10 border border-tarkov-error/40 text-tarkov-error text-xs">
-          <AlertCircle size={13} className="shrink-0" />
-          Zone-based objectives are <strong>not available in the current release</strong>. This feature is still in development.
-        </div>
-      )}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-3">
         <Field label="Type" tooltip="What kind of objective this is.">
           <select className="input-field text-sm" value={objective.type}
