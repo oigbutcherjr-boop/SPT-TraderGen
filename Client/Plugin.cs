@@ -27,6 +27,7 @@ namespace TraderGen.Client
                 QuestPocketRewardPatch.Init(Logger);
                 var harmony = new Harmony("com.tradergen.client");
                 harmony.PatchAll();
+                ZoneKillConditionPatch.Init(Logger, harmony);
                 Logger.LogInfo("[TraderGen] Client patch loaded.");
             }
             catch (Exception ex)

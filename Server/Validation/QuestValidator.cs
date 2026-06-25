@@ -19,7 +19,7 @@ public static class QuestValidator
 
     private static readonly HashSet<string> ValidZoneTypes = new(StringComparer.OrdinalIgnoreCase)
     {
-        "visit", "placeitem", "transition", "flare", "salvagehint",
+        "visit", "placeitem", "botkillzone", "flarezone", "salvage", // note: use "visit" for kill zone quests, not "botkillzone"
     };
 
     private static readonly HashSet<string> ValidEnemyTargets = new(StringComparer.OrdinalIgnoreCase)

@@ -224,9 +224,9 @@ export const OBJECTIVE_TYPES = [
 export const ZONE_TYPES = [
   { value: 'visit', label: 'Visit' },
   { value: 'placeitem', label: 'Place Item' },
-  { value: 'transition', label: 'Transition / Extract' },
-  { value: 'flare', label: 'Flare' },
-  { value: 'salvagehint', label: 'Salvage Hint' },
+  { value: 'botkillzone', label: 'Bot Kill Zone' },
+  { value: 'flarezone', label: 'Flare Zone' },
+  { value: 'salvage', label: 'Salvage' },
 ] as const
 
 export const ENEMY_TARGETS = [

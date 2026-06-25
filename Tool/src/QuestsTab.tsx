@@ -1930,7 +1930,7 @@ function ZoneManager({ zones, onChange }: {
         const isExp = expanded === i
         const hasId = zone.zoneId.trim().length > 0
         return (
-          <div key={i} className="bg-tarkov-surface border border-tarkov-border rounded-lg overflow-hidden">
+          <div key={i} className="bg-tarkov-surface border border-tarkov-border rounded-lg">
             <div
               className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-tarkov-bg/30 transition-colors"
               onClick={() => setExpanded(isExp ? null : i)}
@@ -1973,11 +1973,14 @@ function ZoneManager({ zones, onChange }: {
                       ))}
                     </select>
                   </Field>
-                  <Field label="Zone Type" tooltip="How this zone is used in-game.">
+                  <Field label="Zone Type" tooltip="Use 'Visit' for both zone_visit and zone_kill quest objectives. Use 'Place Item' for zone_place_item objectives.">
                     <select className="input-field text-sm" value={zone.zoneType}
                       onChange={e => updateZone(i, { zoneType: e.target.value })}>
                       {ZONE_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
                     </select>
+                    <p className="text-xs text-tarkov-text-dim mt-1">
+                      Use <span className="font-semibold text-tarkov-text">Visit</span> for both <em>Visit Zone</em> and <em>Kill in Zone</em> quest objectives.
+                    </p>
                   </Field>
                 </div>
 
