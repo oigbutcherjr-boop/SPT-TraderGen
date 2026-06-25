@@ -133,11 +133,13 @@ public class TraderGenPocketMigration(DatabaseService databaseService, ModHelper
 
         var items = databaseService.GetItems();
 
-        // Find the base pocket template to clone from
-        var baseId = new MongoId("557ffd194bdc2d28148b457f");
+        // Use the default pocket template as the base so special slots are preserved.
+        // The default 627a4e6b255f7527fb05a0f6 contains SpecialSlot1/2/3 entries, while
+        // 557ffd194bdc2d28148b457f and 5af99e9186f7747c447120b8 have empty Slots.
+        var baseId = new MongoId("627a4e6b255f7527fb05a0f6");
         if (!items.TryGetValue(baseId, out var baseTemplate))
         {
-            baseId = new MongoId("5af99e9186f7747c447120b8");
+            baseId = new MongoId("557ffd194bdc2d28148b457f");
             items.TryGetValue(baseId, out baseTemplate);
         }
 

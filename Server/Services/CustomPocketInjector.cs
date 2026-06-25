@@ -37,12 +37,14 @@ public class CustomPocketInjector(DatabaseService databaseService)
 
         var items = databaseService.GetItems();
 
-        // Clone the default pocket template as a base
-        var baseId = new MongoId("557ffd194bdc2d28148b457f");
+        // Clone the default pocket template as a base so special slots are preserved.
+        // 557ffd194bdc2d28148b457f and 5af99e9186f7747c447120b8 have empty Slots,
+        // while the default 627a4e6b255f7527fb05a0f6 contains the SpecialSlot1/2/3 entries.
+        var baseId = new MongoId("627a4e6b255f7527fb05a0f6");
         if (!items.TryGetValue(baseId, out var baseTemplate))
         {
-            // Fallback: try another known pocket template
-            baseId = new MongoId("5af99e9186f7747c447120b8");
+            // Fallback: try the root pocket template
+            baseId = new MongoId("557ffd194bdc2d28148b457f");
             items.TryGetValue(baseId, out baseTemplate);
         }
 
