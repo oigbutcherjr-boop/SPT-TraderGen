@@ -28,8 +28,10 @@
     <ItemGroup>
       <TraderFiles Include="$(ProjectDir)traders\**\*" />
       <DbFiles Include="$(ProjectDir)db\**\*" />
+      <ConfigFiles Include="$(ProjectDir)config\**\*" />
     </ItemGroup>
     <Copy SourceFiles="@(TraderFiles)" DestinationFiles="@(TraderFiles->'$(ProjectDir)Build\SPT\user\mods\TraderGen\traders\%(RecursiveDir)%(Filename)%(Extension)')" />
     <Copy SourceFiles="@(DbFiles)" DestinationFiles="@(DbFiles->'$(ProjectDir)Build\SPT\user\mods\TraderGen\db\%(RecursiveDir)%(Filename)%(Extension)')" />
+    <Copy SourceFiles="@(ConfigFiles)" DestinationFiles="@(ConfigFiles->'$(ProjectDir)Build\SPT\user\mods\TraderGen\config\%(RecursiveDir)%(Filename)%(Extension)')" />
   </Target>
 </Project>

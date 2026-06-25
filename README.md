@@ -407,11 +407,11 @@ If a pack has errors it is **skipped** — other packs still load normally.
 
 ---
 
-## Localization - WIP (Not yet implemented)
+## Localization (WIP)
 
-TraderGen supports per-language locale files inside a trader pack. This lets a single pack provide translations for traders, quests, and quest messages without duplicating the pack for each language.
+> **This feature is work-in-progress.** The server will load the locale file, but the client may not display the correct language depending on your SPT `locale.json` setting.
 
-Create a `locales/` folder inside the trader pack:
+TraderGen supports per-language locale files inside a trader pack. Create a `locales/` folder inside the trader pack:
 
 ```
 traders/YourTrader/
@@ -419,7 +419,7 @@ traders/YourTrader/
   ├── quests.json
   └── locales/
       ├── en.json
-      ├── ge.json
+      ├── es.json
       └── po.json
 ```
 
@@ -439,7 +439,7 @@ Each file is a flat JSON object of SPT locale keys:
 }
 ```
 
-The filename must match SPT's internal language key (not the standard ISO code):
+The filename must match SPT's internal language key:
 
 | Language | SPT key | Filename |
 |----------|---------|----------|
@@ -451,7 +451,7 @@ The filename must match SPT's internal language key (not the standard ISO code):
 | Russian | `ru` | `ru.json` |
 | Chinese | `ch` | `ch.json` |
 
-Values from these files override the defaults generated from `trader.json` and `quests.json` for players using that language.
+> **For now, set SPT's `locale.json` to the internal SPT key you want to use** (e.g. `"gameLocale": "es"` instead of `"es-es"`). If the pack does not have that language file, it falls back to `en.json`.
 
 > Locale files must be valid JSON. Unlike `trader.json` and `quests.json`, they do **not** support `//` comments.
 

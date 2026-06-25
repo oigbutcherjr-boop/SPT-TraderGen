@@ -286,7 +286,6 @@ public class TraderGenPlugin(
         // Enable Harmony patches
         GetRepeatableQuestsPatch.SetDependencies(profileHelper, timeUtil);
         new GetRepeatableQuestsPatch().Enable();
-        new LocaleFallbackPatch().Enable();
 
         // Register locale entries via standard registrar
         RepeatableQuestLocaleRegistrar.RegisterLocales(databaseService, logger);
