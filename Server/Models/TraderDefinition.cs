@@ -51,6 +51,11 @@ public class TraderDefinition
     [JsonPropertyName("unlockedByDefault")]
     public bool UnlockedByDefault { get; set; } = true;
 
+    // Quest ID (vanilla or from another mod) that unlocks this trader when completed.
+    // Only used when unlockedByDefault is false.
+    [JsonPropertyName("unlockQuestId")]
+    public string? UnlockQuestId { get; set; }
+
     // Whether the trader can buy items from the player.
     [JsonPropertyName("buyerEnabled")]
     public bool BuyerEnabled { get; set; } = true;

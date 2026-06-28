@@ -46,6 +46,15 @@ public static class TraderValidator
             errors.Add($"{prefix} 'currency' is invalid: '{trader.Currency}'. Use 'RUB', 'USD', or 'EUR'.");
         }
 
+        // --- Unlock quest ---
+        if (!trader.UnlockedByDefault && !string.IsNullOrWhiteSpace(trader.UnlockQuestId))
+        {
+            if (trader.UnlockQuestId.Length != 24 || !IsHexString(trader.UnlockQuestId))
+            {
+                errors.Add($"{prefix} 'unlockQuestId' must be a 24-character hex string. Got: '{trader.UnlockQuestId}'");
+            }
+        }
+
         // --- Loyalty levels ---
         if (trader.LoyaltyLevels.Count == 0)
         {

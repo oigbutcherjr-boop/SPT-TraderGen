@@ -13,6 +13,7 @@ export interface TraderDefinition {
   avatar: string
   currency: string
   unlockedByDefault: boolean
+  unlockQuestId?: string
   buyerEnabled: boolean
   ragfairEnabled: boolean
   balanceRub: number
@@ -333,6 +334,7 @@ export function createDefaultTrader(): TraderDefinition {
     avatar: 'assets/avatar.jpg',
     currency: 'RUB',
     unlockedByDefault: true,
+    unlockQuestId: '',
     buyerEnabled: true,
     ragfairEnabled: true,
     balanceRub: 5000000,

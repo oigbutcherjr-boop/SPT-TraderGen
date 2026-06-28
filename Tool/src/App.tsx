@@ -967,7 +967,7 @@ function GeneralTab({ trader, update, hasError, errorsByField }: {
             tooltip="Master toggle. If off, TraderGen will skip this trader entirely without needing to delete the file." />
           <Toggle label="Unlocked by Default" value={trader.unlockedByDefault}
             onChange={v => update('unlockedByDefault', v)}
-            tooltip="If on, the trader is available from level 1. If off, players must meet requirements to unlock." />
+            tooltip="If on, the trader is available from level 1. If off, set the quest ID below that will unlock this trader." />
           <Toggle label="Buyer Enabled" value={trader.buyerEnabled}
             onChange={v => update('buyerEnabled', v)}
             tooltip="Whether this trader will buy items from the player." />
@@ -978,6 +978,17 @@ function GeneralTab({ trader, update, hasError, errorsByField }: {
             onChange={v => update('insuranceEnabled', v)}
             tooltip="Whether this trader offers item insurance. Most custom traders leave this off." />
         </div>
+
+        {!trader.unlockedByDefault && (
+          <div className="mt-4 p-4 bg-amber-500/10 border border-amber-500/30 rounded-lg">
+            <Field label="Unlock Quest ID" tooltip="24-character quest ID (vanilla or from another mod) that will unlock this trader when completed." error={hasError('unlockQuestId')}>
+              <input type="text" className="input-field font-mono" value={trader.unlockQuestId || ''}
+                onChange={e => update('unlockQuestId', e.target.value)}
+                placeholder="e.g. 5ac3b934156ae10c4430e83c" maxLength={24} />
+              <FieldErrors errors={errorsByField('unlockQuestId')} />
+            </Field>
+          </div>
+        )}
 
         {trader.insuranceEnabled && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4 p-4 bg-amber-500/10 border border-amber-500/30 rounded-lg">

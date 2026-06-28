@@ -29,6 +29,10 @@ export function validateTrader(trader: TraderDefinition): ValidationError[] {
     errors.push({ field: 'currency', message: 'Currency must be RUB, USD, or EUR.' })
   }
 
+  if (!trader.unlockedByDefault && trader.unlockQuestId?.trim() && !HEX_24.test(trader.unlockQuestId.trim())) {
+    errors.push({ field: 'unlockQuestId', message: 'Unlock Quest ID must be a 24-character hex string.' })
+  }
+
   if (trader.loyaltyLevels.length === 0) {
     errors.push({ field: 'loyaltyLevels', message: 'At least one loyalty level is required.' })
   }
@@ -133,6 +137,7 @@ export function buildExportJson(trader: TraderDefinition): object {
     avatar: trader.avatar,
     currency: trader.currency,
     unlockedByDefault: trader.unlockedByDefault,
+    ...(trader.unlockedByDefault ? {} : { unlockQuestId: trader.unlockQuestId?.trim() || '' }),
     buyerEnabled: trader.buyerEnabled,
     ragfairEnabled: trader.ragfairEnabled,
     balanceRub: trader.balanceRub,

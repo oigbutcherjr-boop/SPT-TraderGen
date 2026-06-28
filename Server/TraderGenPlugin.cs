@@ -2,6 +2,8 @@ using System.Reflection;
 using SPTarkov.DI.Annotations;
 using SPTarkov.Server.Core.DI;
 using SPTarkov.Server.Core.Helpers;
+using SPTarkov.Server.Core.Models.Common;
+using SPTarkov.Server.Core.Models.Enums;
 using SPTarkov.Server.Core.Models.Logging;
 using SPTarkov.Server.Core.Models.Spt.Mod;
 using SPTarkov.Server.Core.Models.Utils;
@@ -21,7 +23,7 @@ public record ModMetadata : AbstractModMetadata
     public override string Name { get; init; } = "TraderGen";
     public override string Author { get; init; } = "Serenity";
     public override List<string>? Contributors { get; init; }
-    public override SemanticVersioning.Version Version { get; init; } = new("2.0.2");
+    public override SemanticVersioning.Version Version { get; init; } = new("2.0.3");
     public override SemanticVersioning.Range SptVersion { get; init; } = new("4.0.13");
     public override List<string>? Incompatibilities { get; init; }
     public override Dictionary<string, SemanticVersioning.Range>? ModDependencies { get; init; } = new()
@@ -49,7 +51,7 @@ public class TraderGenPlugin(
     public async Task OnLoad()
     {
         logger.LogWithColor("[TraderGen] ====================================", LogTextColor.Cyan);
-        logger.LogWithColor("[TraderGen] TraderGen Framework v2.0.2 loading...", LogTextColor.Cyan);
+        logger.LogWithColor("[TraderGen] TraderGen Framework v2.0.3 loading...", LogTextColor.Cyan);
         logger.LogWithColor("[TraderGen] ====================================", LogTextColor.Cyan);
 
         // Load trader JSON files from traders/ directory
@@ -92,6 +94,9 @@ public class TraderGenPlugin(
 
         // Load and register quests
         await LoadAndRegisterQuests(loadedTraders);
+
+        // Patch external quests to unlock TraderGen traders when configured
+        ProcessTraderUnlockQuests(loadedTraders);
     }
 
     private async Task LoadAndRegisterQuests(List<TraderLoader.LoadedTrader> loadedTraders)
@@ -379,5 +384,83 @@ public class TraderGenPlugin(
         logger.LogWithColor(
             $"[TraderGen] Pre-registered {totalEntries} locale entries across {locales.Count} quests.",
             LogTextColor.Green);
+    }
+
+    private void ProcessTraderUnlockQuests(List<TraderLoader.LoadedTrader> loadedTraders)
+    {
+        var quests = databaseService.GetQuests();
+        var patchedCount = 0;
+
+        foreach (var loaded in loadedTraders)
+        {
+            var trader = loaded.Definition;
+            if (trader.UnlockedByDefault)
+                continue;
+
+            if (string.IsNullOrWhiteSpace(trader.UnlockQuestId))
+                continue;
+
+            MongoId questId;
+            try
+            {
+                questId = new MongoId(trader.UnlockQuestId);
+            }
+            catch
+            {
+                logger.LogWithColor(
+                    $"[TraderGen] Warning: Trader '{trader.Nickname}' has invalid unlockQuestId '{trader.UnlockQuestId}'. Skipping.",
+                    LogTextColor.Yellow);
+                continue;
+            }
+
+            if (!quests.TryGetValue(questId, out var quest))
+            {
+                logger.LogWithColor(
+                    $"[TraderGen] Warning: Trader '{trader.Nickname}' unlockQuestId '{trader.UnlockQuestId}' not found in quest database. Skipping.",
+                    LogTextColor.Yellow);
+                continue;
+            }
+
+            quest.Rewards ??= new Dictionary<string, List<SPTarkov.Server.Core.Models.Eft.Common.Tables.Reward>>();
+            if (!quest.Rewards.TryGetValue("Success", out var successRewards))
+            {
+                successRewards = [];
+                quest.Rewards["Success"] = successRewards;
+            }
+
+            // Avoid duplicate unlock rewards for the same trader
+            var existing = successRewards.FirstOrDefault(r =>
+                r.Type == RewardType.TraderUnlock && r.TraderId?.ToString() == trader.Id);
+            if (existing != null)
+            {
+                logger.LogWithColor(
+                    $"[TraderGen] Trader '{trader.Nickname}' already has a TraderUnlock reward on quest '{trader.UnlockQuestId}'. Skipping.",
+                    LogTextColor.Cyan);
+                continue;
+            }
+
+            var index = successRewards.Count;
+            successRewards.Add(new SPTarkov.Server.Core.Models.Eft.Common.Tables.Reward
+            {
+                Id = new MongoId(),
+                Type = RewardType.TraderUnlock,
+                TraderId = trader.Id,
+                Value = 0,
+                Index = index,
+                AvailableInGameEditions = [],
+            });
+
+            patchedCount++;
+            logger.LogWithColor(
+                $"[TraderGen] Trader '{trader.Nickname}' will be unlocked by quest '{trader.UnlockQuestId}'.",
+                LogTextColor.Green);
+        }
+
+        if (patchedCount > 0)
+        {
+            logger.LogWithColor(
+                $"[TraderGen] Patched {patchedCount} external quest(s) with TraderUnlock rewards.",
+                LogTextColor.Green);
+        }
     }
 }
