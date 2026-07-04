@@ -981,6 +981,7 @@ function ObjectiveEditor({ objective, onChange }: {
 }) {
   const isKill = objective.type === 'kill_enemy'
   const isHandover = objective.type === 'handover_item' || objective.type === 'handover_fir_item'
+  const isFindItem = objective.type === 'find_item'
   const isLocation = objective.type === 'survive_location' || objective.type === 'extract_location'
   const isZone = objective.type === 'zone_visit' || objective.type === 'zone_kill' || objective.type === 'zone_place_item'
   const isZoneKill = objective.type === 'zone_kill'
@@ -996,6 +997,7 @@ function ObjectiveEditor({ objective, onChange }: {
               const updates: Partial<QuestObjective> = { type: t }
               if (t === 'kill_enemy') { updates.target = 'Savage'; updates.itemTpl = undefined }
               if (t === 'handover_item' || t === 'handover_fir_item') { updates.target = undefined; updates.itemTpl = ''; updates.location = undefined }
+              if (t === 'find_item') { updates.target = undefined; updates.itemTpl = ''; updates.location = undefined; updates.handoverAfterFind = true }
               if (t === 'survive_location' || t === 'extract_location') { updates.location = 'bigmap'; updates.target = undefined; updates.itemTpl = undefined }
               if (t === 'zone_visit') { updates.zoneId = ''; updates.target = undefined; updates.itemTpl = undefined; updates.plantItemTpl = undefined }
               if (t === 'zone_kill') { updates.zoneId = ''; updates.target = 'Savage'; updates.itemTpl = undefined; updates.plantItemTpl = undefined }
@@ -1032,8 +1034,8 @@ function ObjectiveEditor({ objective, onChange }: {
           </Field>
         )}
 
-        {isHandover && (
-          <Field label="Item Template ID" tooltip="The 24-char hex ID of the item to hand over. Find IDs at db.sp-tarkov.com/search">
+        {(isHandover || isFindItem) && (
+          <Field label="Item Template ID" tooltip={isFindItem ? "The 24-char hex ID of the item to find." : "The 24-char hex ID of the item to hand over. Find IDs at db.sp-tarkov.com/search"}>
             <input className="input-field text-sm font-mono" value={objective.itemTpl || ''}
               onChange={e => onChange({ itemTpl: e.target.value })} placeholder="24-char hex" maxLength={24} />
             <p className="text-xs text-tarkov-text-dim mt-1">
@@ -1041,6 +1043,27 @@ function ObjectiveEditor({ objective, onChange }: {
               <a href="https://db.sp-tarkov.com/search" target="_blank" rel="noopener noreferrer"
                 className="text-tarkov-accent hover:text-tarkov-accent-hover underline">db.sp-tarkov.com</a>
             </p>
+          </Field>
+        )}
+
+        {isFindItem && (
+          <Field label="Options" tooltip="Configure the find condition and handover pairing.">
+            <div className="space-y-2 pt-1">
+              <label className="flex items-center gap-2 text-sm text-tarkov-text">
+                <input type="checkbox" className="rounded border-tarkov-border bg-tarkov-bg"
+                  checked={objective.handoverAfterFind ?? true}
+                  onChange={e => onChange({ handoverAfterFind: e.target.checked })}
+                />
+                Require handover after finding
+              </label>
+              <label className="flex items-center gap-2 text-sm text-tarkov-text">
+                <input type="checkbox" className="rounded border-tarkov-border bg-tarkov-bg"
+                  checked={objective.countInRaid ?? false}
+                  onChange={e => onChange({ countInRaid: e.target.checked })}
+                />
+                Count in raid only
+              </label>
+            </div>
           </Field>
         )}
 

@@ -9,6 +9,7 @@ public static class QuestValidator
     {
         "handover_item",
         "handover_fir_item",
+        "find_item",
         "kill_enemy",
         "survive_location",
         "extract_location",
@@ -193,6 +194,7 @@ public static class QuestValidator
         {
             case "handover_item":
             case "handover_fir_item":
+            case "find_item":
                 if (string.IsNullOrWhiteSpace(obj.ItemTpl))
                     errors.Add($"{prefix}: 'itemTpl' is required for {obj.Type} objectives.");
                 else if (obj.ItemTpl.Length != 24 || !IsHexString(obj.ItemTpl))
@@ -395,8 +397,9 @@ public static class QuestValidator
 
                     case "handover_item":
                     case "handover_fir_item":
+                    case "find_item":
                         if (obj.ItemPool.Count == 0)
-                            errors.Add($"{oPrefix}: 'itemPool' is required for handover templates.");
+                            errors.Add($"{oPrefix}: 'itemPool' is required for {obj.Type} templates.");
                         else
                         {
                             foreach (var item in obj.ItemPool.Where(item => item.Length != 24 || !IsHexString(item)))

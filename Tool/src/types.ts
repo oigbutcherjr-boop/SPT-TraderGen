@@ -115,6 +115,9 @@ export interface QuestObjective {
   target?: string
   location?: string
   itemTpl?: string
+  // find_item fields
+  handoverAfterFind?: boolean
+  countInRaid?: boolean
   description?: string
   // Advanced kill conditions (all optional)
   minDistance?: number | null
@@ -220,6 +223,7 @@ export const OBJECTIVE_TYPES = [
   { value: 'kill_enemy', label: 'Kill Enemies' },
   { value: 'handover_item', label: 'Hand Over Items' },
   { value: 'handover_fir_item', label: 'Hand Over Items (Found in Raid)' },
+  { value: 'find_item', label: 'Find Items' },
   { value: 'survive_location', label: 'Survive & Extract' },
   { value: 'extract_location', label: 'Extract from Location' },
   { value: 'zone_visit', label: 'Visit Zone' },

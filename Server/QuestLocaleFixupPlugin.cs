@@ -1,0 +1,101 @@
+using SPTarkov.DI.Annotations;
+using SPTarkov.Server.Core.DI;
+using SPTarkov.Server.Core.Models.Logging;
+using SPTarkov.Server.Core.Models.Utils;
+using SPTarkov.Server.Core.Services;
+using TraderGen.Services;
+
+namespace TraderGen;
+
+// Runs after all mods have loaded (including ItemGen) so that custom item names can be resolved
+// into TraderGen-generated quest locale entries. TraderGen builds quest files before ItemGen
+// injects its items, so the initial locale files may contain raw template IDs instead of names.
+[Injectable(TypePriority = OnLoadOrder.PostSptModLoader)]
+public class QuestLocaleFixupPlugin(
+    ISptLogger<QuestLocaleFixupPlugin> logger,
+    DatabaseService databaseService)
+    : IOnLoad
+{
+    public Task OnLoad()
+    {
+        if (QuestBuilder.LocaleFixups.Count == 0)
+        {
+            return Task.CompletedTask;
+        }
+
+        try
+        {
+            var globalLocales = databaseService.GetLocales().Global;
+            if (!globalLocales.TryGetValue("en", out var enLocale))
+            {
+                logger.LogWithColor("[TraderGen] Could not find English locale for quest item name fixup.", LogTextColor.Yellow);
+                return Task.CompletedTask;
+            }
+
+            // Register a lazy transformer so the patch is applied every time the locale is deserialized.
+            // This is needed because LazyLoad.Value returns a fresh dictionary each access.
+            enLocale.AddTransformer(en =>
+            {
+                if (en == null)
+                {
+                    return en;
+                }
+
+                var patched = 0;
+                foreach (var entry in QuestBuilder.LocaleFixups)
+                {
+                    if (entry.CustomDescription != null)
+                    {
+                        continue;
+                    }
+
+                    if (string.IsNullOrWhiteSpace(entry.ItemTpl))
+                    {
+                        continue;
+                    }
+
+                    var itemName = ResolveItemName(en, entry.ItemTpl);
+                    if (string.IsNullOrWhiteSpace(itemName))
+                    {
+                        continue;
+                    }
+
+                    var newText = entry.ObjectiveType == "find"
+                        ? $"Find {entry.Count} {itemName}"
+                        : $"Hand over {entry.Count} {itemName}";
+
+                    en[entry.CondId] = newText;
+                    patched++;
+                }
+
+                if (patched > 0)
+                {
+                    logger.LogWithColor($"[TraderGen] Patched {patched} quest objective locale(s) with custom item names.", LogTextColor.Cyan);
+                }
+
+                return en;
+            });
+        }
+        catch (Exception ex)
+        {
+            logger.Error($"[TraderGen] Quest locale fixup failed: {ex.Message}");
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private static string? ResolveItemName(Dictionary<string, string> en, string itemTpl)
+    {
+        if (en.TryGetValue($"{itemTpl} Name", out var name) && !string.IsNullOrWhiteSpace(name))
+        {
+            return name;
+        }
+
+        if (en.TryGetValue($"{itemTpl} ShortName", out var shortName) && !string.IsNullOrWhiteSpace(shortName))
+        {
+            return shortName;
+        }
+
+        return null;
+    }
+}

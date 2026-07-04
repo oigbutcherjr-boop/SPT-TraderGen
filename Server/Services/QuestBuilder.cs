@@ -8,10 +8,16 @@ using System.Globalization;
 
 namespace TraderGen.Services;
 
+// Entry for patching item names into quest locales after all mods (e.g. ItemGen) have loaded.
+public record LocaleFixupEntry(string CondId, string? ItemTpl, int Count, string ObjectiveType, string? CustomDescription);
+
 // Translates TraderGen quest definitions into BSG quest format.
 public static class QuestBuilder
 {
     private static readonly Random Rng = new();
+
+    // Locale entries that need item names resolved after custom item mods have loaded.
+    public static readonly List<LocaleFixupEntry> LocaleFixups = new();
 
     // Build quest files for a trader.
     public static int BuildQuestFiles(
@@ -154,11 +160,17 @@ public static class QuestBuilder
 
         // Build AvailableForFinish conditions (objectives)
         var finishConditions = new JsonArray();
+        var conditionIndex = 0;
         for (var i = 0; i < quest.Objectives.Count; i++)
         {
             var obj = quest.Objectives[i];
-            var conditionNode = BuildObjectiveCondition(obj, i, locales, questId, databaseService);
-            finishConditions.Add(conditionNode);
+            var conditions = BuildObjectiveCondition(obj, i, conditionIndex, locales, questId, databaseService).ToList();
+            foreach (var c in conditions)
+            {
+                finishConditions.Add(c);
+            }
+
+            conditionIndex += conditions.Count;
         }
 
         // Build rewards
@@ -218,31 +230,55 @@ public static class QuestBuilder
 
     // Objective builders
 
-    private static JsonNode BuildObjectiveCondition(QuestObjective obj, int index, JsonObject locales, string questId, DatabaseService databaseService)
+    private static IEnumerable<JsonNode> BuildObjectiveCondition(QuestObjective obj, int objectiveIndex, int conditionIndex, JsonObject locales, string questId, DatabaseService databaseService)
     {
-        return obj.Type.ToLowerInvariant() switch
+        switch (obj.Type.ToLowerInvariant())
         {
-            "handover_item" => BuildHandoverCondition(obj, index, false, locales, questId, databaseService),
-            "handover_fir_item" => BuildHandoverCondition(obj, index, true, locales, questId, databaseService),
-            "kill_enemy" => BuildKillCondition(obj, index, locales, questId),
-            "survive_location" => BuildSurviveCondition(obj, index, locales, questId),
-            "extract_location" => BuildExtractCondition(obj, index, locales, questId),
-            "zone_visit" => BuildZoneVisitCondition(obj, index, locales, questId),
-            "zone_kill" => BuildZoneKillCondition(obj, index, locales, questId),
-            "zone_place_item" => BuildZonePlaceItemCondition(obj, index, locales, questId),
-            _ => throw new InvalidOperationException($"Unknown objective type: {obj.Type}"),
-        };
+            case "handover_item":
+                yield return BuildHandoverCondition(obj, objectiveIndex, conditionIndex, false, locales, questId, databaseService);
+                break;
+            case "handover_fir_item":
+                yield return BuildHandoverCondition(obj, objectiveIndex, conditionIndex, true, locales, questId, databaseService);
+                break;
+            case "find_item":
+                foreach (var c in BuildFindItemCondition(obj, objectiveIndex, conditionIndex, locales, questId, databaseService))
+                {
+                    yield return c;
+                }
+                break;
+            case "kill_enemy":
+                yield return BuildKillCondition(obj, objectiveIndex, conditionIndex, locales, questId);
+                break;
+            case "survive_location":
+                yield return BuildSurviveCondition(obj, objectiveIndex, conditionIndex, locales, questId);
+                break;
+            case "extract_location":
+                yield return BuildExtractCondition(obj, objectiveIndex, conditionIndex, locales, questId);
+                break;
+            case "zone_visit":
+                yield return BuildZoneVisitCondition(obj, objectiveIndex, conditionIndex, locales, questId);
+                break;
+            case "zone_kill":
+                yield return BuildZoneKillCondition(obj, objectiveIndex, conditionIndex, locales, questId);
+                break;
+            case "zone_place_item":
+                yield return BuildZonePlaceItemCondition(obj, objectiveIndex, conditionIndex, locales, questId);
+                break;
+            default:
+                throw new InvalidOperationException($"Unknown objective type: {obj.Type}");
+        }
     }
 
-    private static JsonObject BuildHandoverCondition(QuestObjective obj, int index, bool foundInRaid, JsonObject locales, string questId, DatabaseService databaseService)
+    private static JsonObject BuildHandoverCondition(QuestObjective obj, int objectiveIndex, int conditionIndex, bool foundInRaid, JsonObject locales, string questId, DatabaseService databaseService)
     {
-        var condId = DeriveStableId($"{questId}:obj{index}:cond");
+        var condId = DeriveStableId($"{questId}:obj{objectiveIndex}:cond");
 
         // Build locale for this objective
         var firText = foundInRaid ? "found in raid " : "";
         var itemName = GetItemName(databaseService, obj.ItemTpl);
         var desc = obj.Description ?? $"Hand over {obj.Count} {firText}{itemName}";
         locales[condId] = desc;
+        LocaleFixups.Add(new LocaleFixupEntry(condId, obj.ItemTpl, obj.Count, "handover", obj.Description));
 
         return new JsonObject
         {
@@ -251,7 +287,7 @@ public static class QuestBuilder
             ["dynamicLocale"] = false,
             ["globalQuestCounterId"] = "",
             ["id"] = condId,
-            ["index"] = index,
+            ["index"] = conditionIndex,
             ["isEncoded"] = false,
             ["maxDurability"] = 100,
             ["minDurability"] = 0,
@@ -260,6 +296,72 @@ public static class QuestBuilder
             ["target"] = new JsonArray { obj.ItemTpl! },
             ["value"] = obj.Count,
             ["visibilityConditions"] = new JsonArray(),
+        };
+    }
+
+    private static IEnumerable<JsonNode> BuildFindItemCondition(QuestObjective obj, int objectiveIndex, int conditionIndex, JsonObject locales, string questId, DatabaseService databaseService)
+    {
+        var findCondId = DeriveStableId($"{questId}:obj{objectiveIndex}:find");
+        var handoverCondId = DeriveStableId($"{questId}:obj{objectiveIndex}:handover");
+        var visCondId = DeriveStableId($"{questId}:obj{objectiveIndex}:vis");
+
+        var itemName = GetItemName(databaseService, obj.ItemTpl);
+        var desc = obj.Description ?? $"Find {obj.Count} {itemName}";
+        locales[findCondId] = desc;
+        LocaleFixups.Add(new LocaleFixupEntry(findCondId, obj.ItemTpl, obj.Count, "find", obj.Description));
+
+        var findCondition = new JsonObject
+        {
+            ["conditionType"] = "FindItem",
+            ["id"] = findCondId,
+            ["index"] = conditionIndex,
+            ["target"] = new JsonArray { obj.ItemTpl! },
+            ["value"] = obj.Count,
+            ["onlyFoundInRaid"] = false,
+            ["countInRaid"] = obj.CountInRaid,
+            ["minDurability"] = 0,
+            ["maxDurability"] = 100,
+            ["dogtagLevel"] = 0,
+            ["dynamicLocale"] = false,
+            ["isEncoded"] = false,
+            ["parentId"] = "",
+            ["visibilityConditions"] = new JsonArray(),
+        };
+
+        yield return findCondition;
+
+        if (!obj.HandoverAfterFind)
+        {
+            yield break;
+        }
+
+        var handoverDesc = $"Hand over {obj.Count} {itemName}";
+        locales[handoverCondId] = handoverDesc;
+        LocaleFixups.Add(new LocaleFixupEntry(handoverCondId, obj.ItemTpl, obj.Count, "handover", null));
+
+        yield return new JsonObject
+        {
+            ["conditionType"] = "HandoverItem",
+            ["id"] = handoverCondId,
+            ["index"] = conditionIndex + 1,
+            ["target"] = new JsonArray { obj.ItemTpl! },
+            ["value"] = obj.Count,
+            ["onlyFoundInRaid"] = false,
+            ["dogtagLevel"] = 0,
+            ["dynamicLocale"] = false,
+            ["isEncoded"] = false,
+            ["minDurability"] = 0,
+            ["maxDurability"] = 100,
+            ["parentId"] = "",
+            ["visibilityConditions"] = new JsonArray
+            {
+                new JsonObject
+                {
+                    ["conditionType"] = "CompleteCondition",
+                    ["id"] = visCondId,
+                    ["target"] = findCondId,
+                },
+            },
         };
     }
 
@@ -273,10 +375,31 @@ public static class QuestBuilder
             if (globalLocales.TryGetValue("en", out var enLocale))
             {
                 var data = enLocale.Value;
-                if (data != null && data.TryGetValue($"{itemTpl} Name", out var name) && !string.IsNullOrWhiteSpace(name))
+                if (data != null)
                 {
-                    return name;
+                    if (data.TryGetValue($"{itemTpl} Name", out var name) && !string.IsNullOrWhiteSpace(name))
+                    {
+                        return name;
+                    }
+
+                    if (data.TryGetValue($"{itemTpl} ShortName", out var shortName) && !string.IsNullOrWhiteSpace(shortName))
+                    {
+                        return shortName;
+                    }
                 }
+            }
+        }
+        catch
+        {
+            // Fallback to template name/id below
+        }
+
+        try
+        {
+            var items = databaseService.GetItems();
+            if (items.TryGetValue(itemTpl, out var itemTemplate) && !string.IsNullOrWhiteSpace(itemTemplate.Name))
+            {
+                return itemTemplate.Name;
             }
         }
         catch
@@ -287,11 +410,11 @@ public static class QuestBuilder
         return itemTpl;
     }
 
-    private static JsonObject BuildKillCondition(QuestObjective obj, int index, JsonObject locales, string questId)
+    private static JsonObject BuildKillCondition(QuestObjective obj, int objectiveIndex, int conditionIndex, JsonObject locales, string questId)
     {
-        var condId = DeriveStableId($"{questId}:obj{index}:cond");
-        var killCondId = DeriveStableId($"{questId}:obj{index}:kill");
-        var counterId = DeriveStableId($"{questId}:obj{index}:counter");
+        var condId = DeriveStableId($"{questId}:obj{objectiveIndex}:cond");
+        var killCondId = DeriveStableId($"{questId}:obj{objectiveIndex}:kill");
+        var counterId = DeriveStableId($"{questId}:obj{objectiveIndex}:counter");
 
         // Determine target and savageRole
         var target = obj.Target ?? "Savage";
@@ -354,7 +477,7 @@ public static class QuestBuilder
         // "Equipment" counter condition, NOT on "Kills". Each inner array is an OR group.
         if (obj.Wearing?.Count > 0 || obj.NotWearing?.Count > 0)
         {
-            var equipCondId = DeriveStableId($"{questId}:obj{index}:equip");
+            var equipCondId = DeriveStableId($"{questId}:obj{objectiveIndex}:equip");
             var equipCond = new JsonObject
             {
                 ["conditionType"] = "Equipment",
@@ -378,7 +501,7 @@ public static class QuestBuilder
         // Add location condition
         if (!string.IsNullOrWhiteSpace(obj.Location))
         {
-            var locCondId = DeriveStableId($"{questId}:obj{index}:loc");
+            var locCondId = DeriveStableId($"{questId}:obj{objectiveIndex}:loc");
             counterConditions.Add(new JsonObject
             {
                 ["conditionType"] = "Location",
@@ -423,7 +546,7 @@ public static class QuestBuilder
             ["dynamicLocale"] = false,
             ["globalQuestCounterId"] = "",
             ["id"] = condId,
-            ["index"] = index,
+            ["index"] = conditionIndex,
             ["oneSessionOnly"] = obj.OneSessionOnly,
             ["parentId"] = "",
             ["type"] = "Elimination",
@@ -432,12 +555,12 @@ public static class QuestBuilder
         };
     }
 
-    private static JsonObject BuildSurviveCondition(QuestObjective obj, int index, JsonObject locales, string questId)
+    private static JsonObject BuildSurviveCondition(QuestObjective obj, int objectiveIndex, int conditionIndex, JsonObject locales, string questId)
     {
-        var condId = DeriveStableId($"{questId}:obj{index}:cond");
-        var counterId = DeriveStableId($"{questId}:obj{index}:counter");
-        var exitCondId = DeriveStableId($"{questId}:obj{index}:exit");
-        var locCondId = DeriveStableId($"{questId}:obj{index}:loc");
+        var condId = DeriveStableId($"{questId}:obj{objectiveIndex}:cond");
+        var counterId = DeriveStableId($"{questId}:obj{objectiveIndex}:counter");
+        var exitCondId = DeriveStableId($"{questId}:obj{objectiveIndex}:exit");
+        var locCondId = DeriveStableId($"{questId}:obj{objectiveIndex}:loc");
 
         var counterConditions = new JsonArray
         {
@@ -459,7 +582,7 @@ public static class QuestBuilder
 
         if (!string.IsNullOrWhiteSpace(obj.RequiredExtract))
         {
-            var exitNameCondId = DeriveStableId($"{questId}:obj{index}:exitname");
+            var exitNameCondId = DeriveStableId($"{questId}:obj{objectiveIndex}:exitname");
             counterConditions.Add(new JsonObject
             {
                 ["conditionType"] = "ExitName",
@@ -487,7 +610,7 @@ public static class QuestBuilder
             ["dynamicLocale"] = false,
             ["globalQuestCounterId"] = "",
             ["id"] = condId,
-            ["index"] = index,
+            ["index"] = conditionIndex,
             ["oneSessionOnly"] = obj.OneSessionOnly,
             ["parentId"] = "",
             ["type"] = "Exploration",
@@ -496,17 +619,17 @@ public static class QuestBuilder
         };
     }
 
-    private static JsonObject BuildExtractCondition(QuestObjective obj, int index, JsonObject locales, string questId)
+    private static JsonObject BuildExtractCondition(QuestObjective obj, int objectiveIndex, int conditionIndex, JsonObject locales, string questId)
     {
         // extract_location is structurally the same as survive_location in BSG format
-        return BuildSurviveCondition(obj, index, locales, questId);
+        return BuildSurviveCondition(obj, objectiveIndex, conditionIndex, locales, questId);
     }
 
-    private static JsonObject BuildZoneVisitCondition(QuestObjective obj, int index, JsonObject locales, string questId)
+    private static JsonObject BuildZoneVisitCondition(QuestObjective obj, int objectiveIndex, int conditionIndex, JsonObject locales, string questId)
     {
-        var condId = DeriveStableId($"{questId}:obj{index}:cond");
-        var counterId = DeriveStableId($"{questId}:obj{index}:counter");
-        var visitCondId = DeriveStableId($"{questId}:obj{index}:visit");
+        var condId = DeriveStableId($"{questId}:obj{objectiveIndex}:cond");
+        var counterId = DeriveStableId($"{questId}:obj{objectiveIndex}:counter");
+        var visitCondId = DeriveStableId($"{questId}:obj{objectiveIndex}:visit");
 
         var desc = obj.Description ?? "Visit the designated zone";
         locales[condId] = desc;
@@ -536,7 +659,7 @@ public static class QuestBuilder
             ["dynamicLocale"] = false,
             ["globalQuestCounterId"] = "",
             ["id"] = condId,
-            ["index"] = index,
+            ["index"] = conditionIndex,
             ["oneSessionOnly"] = obj.OneSessionOnly,
             ["parentId"] = "",
             ["type"] = "Exploration",
@@ -545,13 +668,13 @@ public static class QuestBuilder
         };
     }
 
-    private static JsonObject BuildZoneKillCondition(QuestObjective obj, int index, JsonObject locales, string questId)
+    private static JsonObject BuildZoneKillCondition(QuestObjective obj, int objectiveIndex, int conditionIndex, JsonObject locales, string questId)
     {
         // Build a standard kill condition then inject an InZone sub-condition
-        var condId = DeriveStableId($"{questId}:obj{index}:cond");
-        var killCondId = DeriveStableId($"{questId}:obj{index}:kill");
-        var counterId = DeriveStableId($"{questId}:obj{index}:counter");
-        var zoneCondId = DeriveStableId($"{questId}:obj{index}:zone");
+        var condId = DeriveStableId($"{questId}:obj{objectiveIndex}:cond");
+        var killCondId = DeriveStableId($"{questId}:obj{objectiveIndex}:kill");
+        var counterId = DeriveStableId($"{questId}:obj{objectiveIndex}:counter");
+        var zoneCondId = DeriveStableId($"{questId}:obj{objectiveIndex}:zone");
 
         var target = obj.Target ?? "Savage";
         var savageRole = new JsonArray();
@@ -617,7 +740,7 @@ public static class QuestBuilder
             ["dynamicLocale"] = false,
             ["globalQuestCounterId"] = "",
             ["id"] = condId,
-            ["index"] = index,
+            ["index"] = conditionIndex,
             ["oneSessionOnly"] = obj.OneSessionOnly,
             ["parentId"] = "",
             ["type"] = "Elimination",
@@ -626,9 +749,9 @@ public static class QuestBuilder
         };
     }
 
-    private static JsonObject BuildZonePlaceItemCondition(QuestObjective obj, int index, JsonObject locales, string questId)
+    private static JsonObject BuildZonePlaceItemCondition(QuestObjective obj, int objectiveIndex, int conditionIndex, JsonObject locales, string questId)
     {
-        var condId = DeriveStableId($"{questId}:obj{index}:cond");
+        var condId = DeriveStableId($"{questId}:obj{objectiveIndex}:cond");
 
         var desc = obj.Description ?? $"Place the required item at the designated location";
         locales[condId] = desc;
@@ -639,7 +762,7 @@ public static class QuestBuilder
             ["dynamicLocale"] = false,
             ["globalQuestCounterId"] = "",
             ["id"] = condId,
-            ["index"] = index,
+            ["index"] = conditionIndex,
             ["parentId"] = "",
             ["plantTime"] = obj.PlantTime ?? 3,
             ["target"] = new JsonArray { obj.PlantItemTpl ?? "" },
@@ -891,7 +1014,7 @@ public static class QuestBuilder
         {
             "kill_enemy" => "Elimination",
             "survive_location" or "extract_location" => "Exploration",
-            "handover_item" or "handover_fir_item" => "PickUp",
+            "handover_item" or "handover_fir_item" or "find_item" => "PickUp",
             _ => "PickUp",
         };
     }

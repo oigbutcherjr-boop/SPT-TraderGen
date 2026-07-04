@@ -333,6 +333,10 @@ public static class RepeatableQuestGenerator
                     availableForFinish.Add(BuildHandoverCondition(objTemplate, count, location,
                         objTemplate.Type.ToLowerInvariant() == "handover_fir_item", rng));
                     break;
+                case "find_item":
+                    questType = QuestTypeEnum.Completion;
+                    availableForFinish.Add(BuildFindItemCondition(objTemplate, count, rng));
+                    break;
                 case "survive_location":
                 case "extract_location":
                     questType = QuestTypeEnum.Exploration;
@@ -460,6 +464,33 @@ public static class RepeatableQuestGenerator
             Value = count,
             Target = new ListOrT<string>(new List<string> { itemTpl }, null),
             OnlyFoundInRaid = foundInRaid,
+            VisibilityConditions = [],
+        };
+    }
+
+    private static QuestCondition BuildFindItemCondition(RotatingObjectiveTemplate objTemplate, int count, Random rng)
+    {
+        var itemTpl = objTemplate.ItemPool.Count > 0
+            ? objTemplate.ItemPool[rng.Next(objTemplate.ItemPool.Count)]
+            : "5449016a4bdc2d6f028b456f"; // Roubles fallback
+
+        var conditionId = new MongoId();
+        RepeatableQuestLocaleStore.AddCondition(conditionId.ToString(), $"Find {count}x item");
+
+        return new QuestCondition
+        {
+            Id = conditionId,
+            DynamicLocale = false,
+            ConditionType = "FindItem",
+            CompareMethod = ">=",
+            Value = count,
+            Target = new ListOrT<string>(new List<string> { itemTpl }, null),
+            OnlyFoundInRaid = false,
+            CountInRaid = false,
+            MinDurability = 0,
+            MaxDurability = 100,
+            DogtagLevel = 0,
+            IsEncoded = false,
             VisibilityConditions = [],
         };
     }

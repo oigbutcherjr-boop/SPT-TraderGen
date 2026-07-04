@@ -88,15 +88,26 @@ public class QuestRequirements
 // A single quest objective the player must complete.
 public class QuestObjective
 {
-    // The type of objective. Supported: handover_item, handover_fir_item, kill_enemy, survive_location, extract_location
+    // The type of objective. Supported: handover_item, handover_fir_item, find_item, kill_enemy, survive_location, extract_location
     [JsonPropertyName("type")]
     public string Type { get; set; } = string.Empty;
 
-    // --- handover_item / handover_fir_item fields ---
+    // --- handover_item / handover_fir_item / find_item fields ---
 
-    // Item template ID to hand over (24-char hex).
+    // Item template ID to hand over or find (24-char hex).
     [JsonPropertyName("itemTpl")]
     public string? ItemTpl { get; set; }
+
+    // --- find_item fields ---
+
+    // If true (default), a paired HandoverItem condition is generated after the FindItem condition.
+    // The handover only becomes visible once the FindItem condition is complete.
+    [JsonPropertyName("handoverAfterFind")]
+    public bool HandoverAfterFind { get; set; } = true;
+
+    // If true, only found-in-raid items count toward the counter.
+    [JsonPropertyName("countInRaid")]
+    public bool CountInRaid { get; set; } = false;
 
     // --- kill_enemy fields ---
 
