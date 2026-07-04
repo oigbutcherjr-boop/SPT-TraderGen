@@ -88,7 +88,7 @@ public class QuestRequirements
 // A single quest objective the player must complete.
 public class QuestObjective
 {
-    // The type of objective. Supported: handover_item, handover_fir_item, find_item, kill_enemy, survive_location, extract_location
+    // The type of objective. Supported: handover_item, handover_fir_item, find_item, leave_item_at_location, kill_enemy, survive_location, extract_location
     [JsonPropertyName("type")]
     public string Type { get; set; } = string.Empty;
 
@@ -179,7 +179,7 @@ public class QuestObjective
     [JsonPropertyName("oneSessionOnly")]
     public bool OneSessionOnly { get; set; } = false;
 
-    // --- zone_visit / zone_place_item / zone_kill fields ---
+    // --- leave_item_at_location / zone_visit / zone_place_item / zone_kill fields ---
 
     // Zone ID referencing a zone defined in this quest pack's zones list.
     [JsonPropertyName("zoneId")]

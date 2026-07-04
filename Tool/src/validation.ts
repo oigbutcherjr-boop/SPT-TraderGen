@@ -3,7 +3,7 @@ import { isDogtagId, normalizeDogtagId } from './types'
 
 const HEX_24 = /^[0-9a-fA-F]{24}$/
 const VALID_CURRENCIES = ['RUB', 'USD', 'EUR']
-const VALID_OBJECTIVE_TYPES = ['kill_enemy', 'handover_item', 'handover_fir_item', 'find_item', 'survive_location', 'extract_location', 'zone_visit', 'zone_kill', 'zone_place_item']
+const VALID_OBJECTIVE_TYPES = ['kill_enemy', 'handover_item', 'handover_fir_item', 'find_item', 'leave_item_at_location', 'survive_location', 'extract_location', 'zone_visit', 'zone_kill', 'zone_place_item']
 const VALID_ROTATION_TYPES = ['daily', 'weekly']
 
 export function validateTrader(trader: TraderDefinition): ValidationError[] {
@@ -232,13 +232,13 @@ export function validateQuestPack(pack: QuestPackDefinition, traderId: string): 
       if (obj.count < 1) {
         errors.push({ field: `quest.${i}.obj.${j}.count`, message: `${objPrefix}: Count must be >= 1.` })
       }
-      if ((obj.type === 'handover_item' || obj.type === 'handover_fir_item' || obj.type === 'find_item') && (!obj.itemTpl || !HEX_24.test(obj.itemTpl))) {
+      if ((obj.type === 'handover_item' || obj.type === 'handover_fir_item' || obj.type === 'find_item' || obj.type === 'leave_item_at_location') && (!obj.itemTpl || !HEX_24.test(obj.itemTpl))) {
         errors.push({ field: `quest.${i}.obj.${j}.itemTpl`, message: `${objPrefix}: Item template ID required (24-char hex).` })
       }
       if ((obj.type === 'survive_location' || obj.type === 'extract_location') && !obj.location) {
         errors.push({ field: `quest.${i}.obj.${j}.location`, message: `${objPrefix}: Location is required.` })
       }
-      if ((obj.type === 'zone_visit' || obj.type === 'zone_kill' || obj.type === 'zone_place_item') && !obj.zoneId?.trim()) {
+      if ((obj.type === 'zone_visit' || obj.type === 'zone_kill' || obj.type === 'zone_place_item' || obj.type === 'leave_item_at_location') && !obj.zoneId?.trim()) {
         errors.push({ field: `quest.${i}.obj.${j}.zoneId`, message: `${objPrefix}: Zone ID is required for ${obj.type}.` })
       }
       if (obj.type === 'zone_place_item' && !obj.plantItemTpl?.trim()) {

@@ -224,6 +224,7 @@ export const OBJECTIVE_TYPES = [
   { value: 'handover_item', label: 'Hand Over Items' },
   { value: 'handover_fir_item', label: 'Hand Over Items (Found in Raid)' },
   { value: 'find_item', label: 'Find Items' },
+  { value: 'leave_item_at_location', label: 'Leave Item at Location' },
   { value: 'survive_location', label: 'Survive & Extract' },
   { value: 'extract_location', label: 'Extract from Location' },
   { value: 'zone_visit', label: 'Visit Zone' },

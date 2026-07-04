@@ -60,9 +60,12 @@ public class QuestLocaleFixupPlugin(
                         continue;
                     }
 
-                    var newText = entry.ObjectiveType == "find"
-                        ? $"Find {entry.Count} {itemName}"
-                        : $"Hand over {entry.Count} {itemName}";
+                    var newText = entry.ObjectiveType switch
+                    {
+                        "find" => $"Find {entry.Count} {itemName}",
+                        "leave" => $"Leave {itemName} at the designated location",
+                        _ => $"Hand over {entry.Count} {itemName}",
+                    };
 
                     // Avoid touching the dictionary if the value is already correct.
                     if (!en.TryGetValue(entry.CondId, out var current) || current != newText)

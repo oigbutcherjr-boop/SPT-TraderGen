@@ -10,6 +10,7 @@ public static class QuestValidator
         "handover_item",
         "handover_fir_item",
         "find_item",
+        "leave_item_at_location",
         "kill_enemy",
         "survive_location",
         "extract_location",
@@ -199,6 +200,15 @@ public static class QuestValidator
                     errors.Add($"{prefix}: 'itemTpl' is required for {obj.Type} objectives.");
                 else if (obj.ItemTpl.Length != 24 || !IsHexString(obj.ItemTpl))
                     errors.Add($"{prefix}: 'itemTpl' must be a 24-character hex string. Got: '{obj.ItemTpl}'");
+                break;
+
+            case "leave_item_at_location":
+                if (string.IsNullOrWhiteSpace(obj.ItemTpl))
+                    errors.Add($"{prefix}: 'itemTpl' is required for {obj.Type} objectives.");
+                else if (obj.ItemTpl.Length != 24 || !IsHexString(obj.ItemTpl))
+                    errors.Add($"{prefix}: 'itemTpl' must be a 24-character hex string. Got: '{obj.ItemTpl}'");
+                if (string.IsNullOrWhiteSpace(obj.ZoneId))
+                    errors.Add($"{prefix}: 'zoneId' is required for {obj.Type} objectives.");
                 break;
 
             case "kill_enemy":

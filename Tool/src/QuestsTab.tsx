@@ -982,8 +982,9 @@ function ObjectiveEditor({ objective, onChange }: {
   const isKill = objective.type === 'kill_enemy'
   const isHandover = objective.type === 'handover_item' || objective.type === 'handover_fir_item'
   const isFindItem = objective.type === 'find_item'
+  const isLeaveItemAtLocation = objective.type === 'leave_item_at_location'
   const isLocation = objective.type === 'survive_location' || objective.type === 'extract_location'
-  const isZone = objective.type === 'zone_visit' || objective.type === 'zone_kill' || objective.type === 'zone_place_item'
+  const isZone = objective.type === 'zone_visit' || objective.type === 'zone_kill' || objective.type === 'zone_place_item' || objective.type === 'leave_item_at_location'
   const isZoneKill = objective.type === 'zone_kill'
   const isZonePlaceItem = objective.type === 'zone_place_item'
 
@@ -1002,6 +1003,7 @@ function ObjectiveEditor({ objective, onChange }: {
               if (t === 'zone_visit') { updates.zoneId = ''; updates.target = undefined; updates.itemTpl = undefined; updates.plantItemTpl = undefined }
               if (t === 'zone_kill') { updates.zoneId = ''; updates.target = 'Savage'; updates.itemTpl = undefined; updates.plantItemTpl = undefined }
               if (t === 'zone_place_item') { updates.zoneId = ''; updates.plantItemTpl = ''; updates.target = undefined; updates.itemTpl = undefined }
+              if (t === 'leave_item_at_location') { updates.zoneId = ''; updates.itemTpl = ''; updates.target = undefined; updates.plantItemTpl = undefined }
               onChange(updates)
             }}>
             {OBJECTIVE_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
@@ -1034,8 +1036,8 @@ function ObjectiveEditor({ objective, onChange }: {
           </Field>
         )}
 
-        {(isHandover || isFindItem) && (
-          <Field label="Item Template ID" tooltip={isFindItem ? "The 24-char hex ID of the item to find." : "The 24-char hex ID of the item to hand over. Find IDs at db.sp-tarkov.com/search"}>
+        {(isHandover || isFindItem || isLeaveItemAtLocation) && (
+          <Field label="Item Template ID" tooltip={isFindItem ? "The 24-char hex ID of the item to find." : isLeaveItemAtLocation ? "The 24-char hex ID of the item to leave at the location." : "The 24-char hex ID of the item to hand over. Find IDs at db.sp-tarkov.com/search"}>
             <input className="input-field text-sm font-mono" value={objective.itemTpl || ''}
               onChange={e => onChange({ itemTpl: e.target.value })} placeholder="24-char hex" maxLength={24} />
             <p className="text-xs text-tarkov-text-dim mt-1">
@@ -1108,7 +1110,7 @@ function ObjectiveEditor({ objective, onChange }: {
         )}
 
         {(isZone && !isZoneKill) && (
-          <Field label="Linger Time (s)" tooltip="Seconds player must stay in zone. 0 = instant trigger.">
+          <Field label={isLeaveItemAtLocation ? 'Plant Time (s)' : 'Linger Time (s)'} tooltip={isLeaveItemAtLocation ? 'Seconds required to leave the item at the location.' : 'Seconds player must stay in zone. 0 = instant trigger.'}>
             <input type="number" className="input-field text-sm" min={0}
               value={objective.plantTime ?? 0}
               onChange={e => onChange({ plantTime: Number(e.target.value) || undefined })} />
@@ -1939,7 +1941,7 @@ function ZoneManager({ zones, onChange }: {
       {zones.length === 0 && (
         <div className="bg-tarkov-surface border border-tarkov-border rounded-lg px-4 py-3 text-sm text-tarkov-text-dim flex items-center gap-2">
           <HelpCircle size={14} className="text-tarkov-accent shrink-0" />
-          No zones defined. Zones are required for zone_visit, zone_kill, and zone_place_item objectives. Use the in-game F12 editor to place zones, then copy the coordinates here.
+          No zones defined. Zones are required for zone_visit, zone_kill, zone_place_item, and leave_item_at_location objectives. Use the in-game F12 editor to place zones, then copy the coordinates here.
         </div>
       )}
 
@@ -1990,13 +1992,13 @@ function ZoneManager({ zones, onChange }: {
                       ))}
                     </select>
                   </Field>
-                  <Field label="Zone Type" tooltip="Use 'Visit' for both zone_visit and zone_kill quest objectives. Use 'Place Item' for zone_place_item objectives.">
+                  <Field label="Zone Type" tooltip="Use 'Visit' for zone_visit, zone_kill, and leave_item_at_location quest objectives. Use 'Place Item' for zone_place_item objectives.">
                     <select className="input-field text-sm" value={zone.zoneType}
                       onChange={e => updateZone(i, { zoneType: e.target.value })}>
                       {ZONE_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
                     </select>
                     <p className="text-xs text-tarkov-text-dim mt-1">
-                      Use <span className="font-semibold text-tarkov-text">Visit</span> for both <em>Visit Zone</em> and <em>Kill in Zone</em> quest objectives.
+                      Use <span className="font-semibold text-tarkov-text">Visit</span> for <em>Visit Zone</em>, <em>Kill in Zone</em>, and <em>Leave Item at Location</em> quest objectives.
                     </p>
                   </Field>
                 </div>

@@ -246,6 +246,9 @@ public static class QuestBuilder
                     yield return c;
                 }
                 break;
+            case "leave_item_at_location":
+                yield return BuildLeaveItemAtLocationCondition(obj, objectiveIndex, conditionIndex, locales, questId);
+                break;
             case "kill_enemy":
                 yield return BuildKillCondition(obj, objectiveIndex, conditionIndex, locales, questId);
                 break;
@@ -769,6 +772,37 @@ public static class QuestBuilder
             ["zoneId"] = obj.ZoneId ?? "",
             ["value"] = obj.Count,
             ["visibilityConditions"] = new JsonArray(),
+        };
+    }
+
+    private static JsonObject BuildLeaveItemAtLocationCondition(QuestObjective obj, int objectiveIndex, int conditionIndex, JsonObject locales, string questId)
+    {
+        var condId = DeriveStableId($"{questId}:obj{objectiveIndex}:cond");
+
+        var itemName = obj.ItemTpl ?? "item";
+        var desc = obj.Description ?? $"Leave {itemName} at the designated location";
+        locales[condId] = desc;
+        LocaleFixups.Add(new LocaleFixupEntry(condId, obj.ItemTpl, obj.Count, "leave", obj.Description));
+
+        return new JsonObject
+        {
+            ["conditionType"] = "LeaveItemAtLocation",
+            ["countInRaid"] = false,
+            ["dogtagLevel"] = 0,
+            ["dynamicLocale"] = false,
+            ["globalQuestCounterId"] = "",
+            ["id"] = condId,
+            ["index"] = conditionIndex,
+            ["isEncoded"] = false,
+            ["maxDurability"] = 100,
+            ["minDurability"] = 0,
+            ["onlyFoundInRaid"] = false,
+            ["parentId"] = "",
+            ["plantTime"] = obj.PlantTime ?? 20,
+            ["target"] = new JsonArray { obj.ItemTpl ?? "" },
+            ["value"] = obj.Count,
+            ["visibilityConditions"] = new JsonArray(),
+            ["zoneId"] = obj.ZoneId ?? "",
         };
     }
 
