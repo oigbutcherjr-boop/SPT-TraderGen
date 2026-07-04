@@ -34,6 +34,7 @@ public class QuestLocaleFixupPlugin(
 
             // Register a lazy transformer so the patch is applied every time the locale is deserialized.
             // This is needed because LazyLoad.Value returns a fresh dictionary each access.
+            var entriesToPatch = QuestBuilder.LocaleFixups.Count;
             enLocale.AddTransformer(en =>
             {
                 if (en == null)
@@ -41,7 +42,6 @@ public class QuestLocaleFixupPlugin(
                     return en;
                 }
 
-                var patched = 0;
                 foreach (var entry in QuestBuilder.LocaleFixups)
                 {
                     if (entry.CustomDescription != null)
@@ -64,17 +64,20 @@ public class QuestLocaleFixupPlugin(
                         ? $"Find {entry.Count} {itemName}"
                         : $"Hand over {entry.Count} {itemName}";
 
-                    en[entry.CondId] = newText;
-                    patched++;
-                }
-
-                if (patched > 0)
-                {
-                    logger.LogWithColor($"[TraderGen] Patched {patched} quest objective locale(s) with custom item names.", LogTextColor.Cyan);
+                    // Avoid touching the dictionary if the value is already correct.
+                    if (!en.TryGetValue(entry.CondId, out var current) || current != newText)
+                    {
+                        en[entry.CondId] = newText;
+                    }
                 }
 
                 return en;
             });
+
+            if (entriesToPatch > 0)
+            {
+                logger.LogWithColor($"[TraderGen] Registered locale transformer for {entriesToPatch} quest objective(s); item names will be resolved after custom item mods load.", LogTextColor.Cyan);
+            }
         }
         catch (Exception ex)
         {
